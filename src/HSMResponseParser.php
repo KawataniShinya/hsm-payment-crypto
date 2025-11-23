@@ -115,6 +115,27 @@ class HSMResponseParser
     }
 
     /**
+     * MAC検証レスポンスを解析して検証結果を返す
+     *
+     * @param string $responseData レスポンスデータ
+     * @return bool 検証結果
+     */
+    public function parseResponseVerifyMAC(string $responseData): bool
+    {
+        $responseCode = substr(
+            $responseData,
+            self::INITIAL_CONTROL_CHAR_SIZE + self::RESPONSE_CODE_START_INDEX,
+            self::RESPONSE_CODE_LENGTH
+        );
+
+        if ($responseCode === '00') {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Import a Public Key 応答(EP)から公開鍵MACを抽出
      *
      * @param string $responseData レスポンスデータ

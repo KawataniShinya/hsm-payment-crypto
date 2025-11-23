@@ -231,6 +231,58 @@ class HSMCommandGenerator
     }
 
     /**
+     * Verify MAC コマンド(GW)の生成
+     *
+     * @param string $macTargetData MAC検証対象データ
+     * @param string $ksn KSN
+     * @param string $macString 検証するMAC文字列
+     * @return string
+     */
+    public function generateCommandVerifyMac(string $macTargetData, string $ksn, string $macString): string
+    {
+        // パラメータ設定（整形済み）
+        $header = '00001'; // カウンター(固定)
+        $headerBodySeparator = '-';
+        $commandCode = 'GW'; // Generate/Verify a MAC (3DES & AES DUKPT)
+        $macMode = '2'; // Verify Approval MAC (4 leftmost bytes of MAC)
+        $macMethod = '1'; // ANSI X9.19
+        $keyAt32 = $this->hsmBdkBlock;
+        $ksnDescriptor = 'A05';
+        $mac = strtoupper($macString);
+        $ksnAt20 = strtoupper($ksn);
+
+        $workLength = strlen($macTargetData);
+        $workMessageData = $macTargetData;
+        if ($workLength % 8 == 0) {
+            $workMessageData .= chr(0);
+            $workLength++;
+        }
+        $workLength = $workLength ? ceil($workLength / 8) * 8 : 8;
+        // 8の倍数の領域に左詰、余ったらchr(0)で埋める
+        $messageData = sprintf('%-' . "'" . chr(0) . $workLength . 's', $workMessageData);
+        $messageLength = sprintf('%04d', strlen($messageData));
+
+        // ペイロード作成
+        $telegram =
+            $header .
+            $headerBodySeparator .
+            $commandCode .
+            $macMode .
+            $macMethod .
+            $keyAt32 .
+            $ksnDescriptor .
+            $ksnAt20 .
+            $mac .
+            $messageLength .
+            $messageData;
+
+        // メッセージ生成（長さ + ペイロード）
+        $message = pack('H*', sprintf('%04X', strlen($telegram))) . $telegram;
+
+        return $message;
+    }
+
+    /**
      * Import a Public Key コマンド(EO)の生成
      *
      * @param string $publicKey 公開鍵（バイナリデータ）

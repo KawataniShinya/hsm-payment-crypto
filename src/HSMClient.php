@@ -206,6 +206,41 @@ class HSMClient
     }
 
     /**
+     * MACを検証する
+     *
+     * @param string $macTargetData MAC検証対象データ
+     * @param string $ksn KSN
+     * @param string $macString 検証するMAC文字列
+     * @return bool 検証結果
+     * @throws Exception
+     */
+    public function verifyMAC(string $macTargetData, string $ksn, string $macString): bool
+    {
+        return $this->executeWithConnection(function ($connection) use ($macTargetData, $ksn, $macString) {
+            $message = $this->commandGenerator->generateCommandVerifyMac($macTargetData, $ksn, $macString);
+            $this->sendMessage($message, $connection);
+
+            // MAC検証の場合は特別な処理：エラーコード01（MAC検証失敗）も正常な応答として扱う
+            $responseData = $this->getResponseMessage($connection);
+            $errorCode = $this->responseParser->getErrorCode($responseData);
+
+            // エラーコード01（MAC検証失敗）の場合は検証失敗として処理
+            if ($errorCode === '01') {
+                return false;
+            }
+
+            // その他のエラーの場合は例外を投げる
+            if ($errorCode !== HSMResponseParser::ERROR_CODE_NO_ERROR) {
+                echo "HSM Error: ResponseCode=" . $this->responseParser->getResponseCode($responseData) . ", ErrorCode=$errorCode\n";
+                throw new Exception("HSM Error: E999999");
+            }
+
+            $isVerified = $this->responseParser->parseResponseVerifyMAC($responseData);
+            return $isVerified;
+        });
+    }
+
+    /**
      * 公開鍵をHSMにインポート
      *
      * @param string $publicKey 公開鍵（バイナリデータ）

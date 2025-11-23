@@ -21,6 +21,7 @@ payShield10K HSMの各種コマンドを実行できます。主に以下の機�
 - **データブロックECB復号化（BDK使用）**: BDKを使用してECBモードでデータブロックを復号化
 - **TMK生成**: HSMを使用してTMK（Terminal Master Key）を生成
 - **MAC生成**: HSMを使用してMAC値を生成（決済データの整合性検証に使用）
+- **MAC検証**: HSMを使用してMAC値の検証を実行（決済データの整合性検証に使用）
 
 ## ファイル構成
 
@@ -41,6 +42,7 @@ HSMPaymentCrypto/
 ├── DecryptECBwithBDK.php    # データブロックECB復号化ツール（BDK使用）
 ├── GenerateTMK.php          # TMK生成ツール
 ├── GenerateMAC.php          # MAC生成ツール
+├── VerifyMAC.php             # MAC検証ツール
 ├── profile.php               # ユーザー設定ファイル
 ├── README.md                 # このファイル
 └── src/                      # プログラムクラス群
@@ -1024,3 +1026,53 @@ MAC Value: 1D69466A
 - **データ整合性検証**: 決済データの改ざん検出に使用
 - **DUKPT対応**: KSNを使用した動的キー管理に対応
 - **16進数文字列対応**: 入力データは16進数文字列形式で指定
+
+#### VerifyMAC.php (GW/GX)
+
+MAC（Message Authentication Code）を検証するツールです。決済データの整合性を検証するために使用されます。
+
+##### 使用コマンド
+
+[GW/GX] Generate/Verify a MAC (3DES & AES DUKPT)
+
+##### 使用方法
+
+```bash
+php VerifyMAC.php <macTargetData> <KSN> <MAC>
+```
+
+##### パラメータ
+
+- `macTargetData`: MAC検証対象データ（16進数文字列）※実際の検証はバイナリ変換されたデータが対象
+- `KSN`: キーシリアル番号（20文字の16進数）
+- `MAC`: 検証するMAC値（16進数文字列）
+
+##### 実行例
+
+```bash
+php VerifyMAC.php 5047303530000220053902013886e99969ba86497106843dda0bfc5fea927e2cfb6c469e76aa5fd80d55b97f3a0a867368908de7bf6e88503518153d9b8cfabddc48d9ecb6ef6b12f602b2d3277a4be3d561681d2595c6657f6f2d1acdb75043c25998cfd2f9d5acfbecba2ed38a7a0e1835999711489b55c2301a1fc3348a40c67d4dd32859ac91dac027c573aebfac841bca2bc26a2f4796b581f18f032e8bc58854ce5a64a3c1979596a26c87fa59c60cffb043c998ec7225ef0c256a9d06a5d8e48656942e78016eb1c5e8bd002bb5b4a7798fa4a25685309ab2f18363be52e02364a2329ced208ecf644466f64893b9918f2b2e24a47761db0c70404e197f3fdf6446ff9cd081f72c11d1b16ea4a1d66290727e1238264bf89bd46025e1fc21e247d15970efe667f14e4969fa1e4d3991ccb17f9bd64ca82dfd8476679348b7800433000000355a0a621094ffffffffff152f950504c00488005f200855494343465431355f24031010315f280201569f3303e0f8c89f3403420300 50473035300002200539 1D69466A
+```
+
+##### 期待値
+
+```
+=== MAC Verification Tool ===
+MAC Target Data: 5047303530000220053902013886e99969ba86497106843dda0bfc5fea927e2cfb6c469e76aa5fd80d55b97f3a0a867368908de7bf6e88503518153d9b8cfabddc48d9ecb6ef6b12f602b2d3277a4be3d561681d2595c6657f6f2d1acdb75043c25998cfd2f9d5acfbecba2ed38a7a0e1835999711489b55c2301a1fc3348a40c67d4dd32859ac91dac027c573aebfac841bca2bc26a2f4796b581f18f032e8bc58854ce5a64a3c1979596a26c87fa59c60cffb043c998ec7225ef0c256a9d06a5d8e48656942e78016eb1c5e8bd002bb5b4a7798fa4a25685309ab2f18363be52e02364a2329ced208ecf644466f64893b9918f2b2e24a47761db0c70404e197f3fdf6446ff9cd081f72c11d1b16ea4a1d66290727e1238264bf89bd46025e1fc21e247d15970efe667f14e4969fa1e4d3991ccb17f9bd64ca82dfd8476679348b7800433000000355a0a621094ffffffffff152f950504c00488005f200855494343465431355f24031010315f280201569f3303e0f8c89f3403420300
+KSN: 50473035300002200539
+MAC: 1D69466A
+
+Connected to HSM: tcp://192.168.8.202:1500
+Send: 00001-GW21S10096B0TN00S0000FD2196304A9F78B4844B0719E4DFBACD97ABA9E94A05EFB3BFD3F754CC626643675DE7D3A50FBE45A05504730353000022005391D69466A0384PG050
+Receive: 00001-GX00
+Disconnected from HSM
+=== RESULT ===
+isVerified: Verified
+```
+
+##### 機能説明
+
+- **MAC検証**: HSMを使用してMAC値の検証を実行
+- **データ整合性検証**: 決済データの改ざん検出に使用
+- **DUKPT対応**: KSNを使用した動的キー管理に対応
+- **16進数文字列対応**: 入力データは16進数文字列形式で指定
+- **検証結果表示**: Verified/Not Verifiedで結果を表示
