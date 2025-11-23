@@ -371,4 +371,16 @@ class HSMResponseParser
             'lengthBytes' => $lengthBytes
         ];
     }
+
+    /**
+     * Form Key from Encrypted Components 応答からキーを抽出
+     *
+     * @param string $responseData レスポンスデータ
+     * @return string 生成されたキーの16進数文字列
+     */
+    public function parseResponseFormKeyFromEncryptedComponentsToHex(string $responseData): string
+    {
+        $resultHex = substr(bin2hex($responseData), 24, -12);
+        return $resultHex;
+    }
 }

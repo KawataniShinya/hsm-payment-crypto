@@ -15,6 +15,7 @@ payShield10K HSMの各種コマンドを実行できます。主に以下の機�
 - **IPEK生成（形式未定）**: BDKとTMKを使用してIPEKを生成（後続処理でTR-34形式で出力する想定）
 - **IPEKエクスポート（TR-34形式）**: DeriveIPEK.phpで生成されたIPEKと公開鍵を使用してIPEKをTR-34形式でエクスポート
 - **データ復号化（CBCモード）**: 暗号化されたデータをCBCモードで復号化
+- **キーコンポーネントからキー生成**: 2つのキーコンポーネントから新たなキーを生成（ZPK/ZEK対応）
 
 ## ファイル構成
 
@@ -29,6 +30,7 @@ HSMPaymentCrypto/
 ├── DeriveIPEK.php            # IPEK生成ツール（形式未定）
 ├── ExportIPEKformattedTR34.php # IPEKエクスポートツール（TR-34形式）
 ├── DecryptCBC.php            # データ復号化ツール（CBCモード）
+├── FormKeyFromEncryptedComponents.php # キーコンポーネントからキー生成ツール
 ├── profile.php               # ユーザー設定ファイル
 ├── README.md                 # このファイル
 └── src/                      # プログラムクラス群
@@ -692,3 +694,59 @@ decryptedText: 4f08a000000333010102500b55494343204352454449545713621094800000000
 ```
 
 > **注意**: 復号化結果の末尾にパディングデータ（`8000000000000000`）が含まれます。これはCBCモードの復号化における正常な動作です。
+
+#### FormKeyFromEncryptedComponents.php (A4/A5)
+
+2つのキーコンポーネントから新たなキーを生成するツールです。ZPK（Zone PIN Key）やZEK（Zone Encryption Key）などの生成に使用されます。
+
+##### 使用コマンド
+
+[A4/A5] Form Key from Encrypted Components
+
+##### 使用方法
+
+```bash
+php FormKeyFromEncryptedComponents.php <keyType>
+```
+
+##### パラメータ
+
+- `keyType`: 生成するキーの種類
+  - `zpk`: ZPK (Zone PIN Key) を生成
+  - `zek`: ZEK (Zone Encryption Key) を生成
+
+##### 実行例
+
+```bash
+# ZPKを生成
+php FormKeyFromEncryptedComponents.php zpk
+
+# ZEKを生成
+php FormKeyFromEncryptedComponents.php zek
+```
+
+##### 期待値
+
+```bash
+=== Form Key from Encrypted Components Tool ===
+Key Type: ZPK
+
+Connected to HSM: tcp://192.168.8.202:1500
+Send: 00001-A42FFFSS10096P0TNc1S0000816322732222F2BAA5F86DD0FEAED1CC16B9E691DE42682F89BFD0C630B853DEE46C8D24A7883E7FS10096P0TNc1S00003E325E7C8C60B6DF5CB6D37A95F64902795837374D9A1309B6ED6DBFC504A8ED1C625C3A6312A0AC%00
+Receive: 00001-A500S10096P0TN00S0000D76AC3B0402D799DA896E731FF7F98A6B5E7A90825B1A1B2E4561238B26F150E9CA1E39022D03AE9...
+Disconnected from HSM
+=== RESULT ===
+Generated Key: S10096P0TN00S0000D76AC3B0402D799DA896E731FF7F98A6B5E7A90825B1A1B2E4561238B26F150E9CA1E39022D03AE9...
+```
+
+> **注意**: 生成されるキーは毎回異なります。上記は実行例であり、実際の出力は実行のたびに変わります。キーはTR-31形式（`S10096P0TN00S0000...`で始まる）で出力されます。
+
+##### 機能説明
+
+- **キー生成**: HSMを使用して2つのキーコンポーネントから新しいキーを生成
+- **ZPK/ZEK対応**: 引数でZPKまたはZEKの生成を選択可能
+- **キーコンポーネント管理**: `src/property.php`に定義されたキーコンポーネントを使用
+- **16進数デコード**: HSMからの応答を16進数文字列からデコードして出力
+- **TR-31形式**: 標準的なキーブロック形式（S10096...）で出力
+
+> **注意**: キーコンポーネントは`src/property.php`の`key_components`セクションに定義されています。ZPKは`zpk.kc1`と`zpk.kc2`から、ZEKは`zek.kc1`と`zek.kc2`から生成されます。

@@ -522,4 +522,42 @@ class HSMCommandGenerator
 
         return $message;
     }
+
+    /**
+     * Form Key from Encrypted Components コマンド(A4)の生成
+     *
+     * @param string $keyComponent1 キーコンポーネント1
+     * @param string $keyComponent2 キーコンポーネント2
+     * @return string
+     */
+    public function generateCommandFormKeyFromEncryptedComponents(string $keyComponent1, string $keyComponent2): string
+    {
+        // パラメータ設定（整形済み）
+        $header = '00001'; // カウンター(固定)
+        $headerBodySeparator = '-';
+        $commandCode = 'A4'; // Form Key from Encrypted Components
+        $numberOfComponents = sprintf('%01d', 2); // コンポーネント数
+        $keyType = 'FFF'; // For a Key Block LMK (This field is ignored)
+        $keySchemeLMK = 'S'; // not included in the authenticated data
+        $delimiter = '%';
+        $lmkIdentifier = sprintf('%02d', 0);
+
+        // ペイロード作成
+        $telegram =
+            $header .
+            $headerBodySeparator .
+            $commandCode .
+            $numberOfComponents .
+            $keyType .
+            $keySchemeLMK .
+            $keyComponent1 .
+            $keyComponent2 .
+            $delimiter .
+            $lmkIdentifier;
+
+        // メッセージ生成（長さ + ペイロード）
+        $message = pack('H*', sprintf('%04X', strlen($telegram))) . $telegram;
+
+        return $message;
+    }
 }

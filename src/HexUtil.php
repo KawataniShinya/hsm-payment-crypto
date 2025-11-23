@@ -8,6 +8,27 @@ class HexUtil
 {
     /**
      * 16進数文字列を2桁ずつ分割し、それぞれを文字に変換する。
+     *
+     * @param string $hexString
+     *
+     * @return string
+     */
+    public static function convertHexToString(string $hexString): string
+    {
+        $resultText = '';
+        for ($i = 0; $i < strlen($hexString); $i += 2) {
+            // 2桁ずつ取り出して16進数を10進数に変換
+            $decimal = hexdec(substr($hexString, $i, 2));
+
+            // 10進数を文字に変換して連結
+            $resultText .= chr($decimal);
+        }
+
+        return $resultText;
+    }
+
+    /**
+     * 16進数文字列を2桁ずつ分割し、それぞれを文字に変換する。
      * 終端を0x80とする。
      *
      * @param string $hexString

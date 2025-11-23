@@ -306,4 +306,23 @@ class HSMClient
             return $ipekTr34;
         });
     }
+
+    /**
+     * キーコンポーネントからキーを生成
+     *
+     * @param string $keyComponent1 キーコンポーネント1
+     * @param string $keyComponent2 キーコンポーネント2
+     * @return string 生成されたキーの16進数文字列
+     * @throws Exception
+     */
+    public function formKeyFromEncryptedComponents(string $keyComponent1, string $keyComponent2): string
+    {
+        return $this->executeWithConnection(function ($connection) use ($keyComponent1, $keyComponent2) {
+            $message = $this->commandGenerator->generateCommandFormKeyFromEncryptedComponents($keyComponent1, $keyComponent2);
+            $this->sendMessage($message, $connection);
+            $responseData = $this->getResponseMessageWithCheckError($connection, 'E100012');
+            $resultHex = $this->responseParser->parseResponseFormKeyFromEncryptedComponentsToHex($responseData);
+            return $resultHex;
+        });
+    }
 }
