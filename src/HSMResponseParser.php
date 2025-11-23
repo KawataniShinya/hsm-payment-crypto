@@ -14,6 +14,8 @@ class HSMResponseParser
     private const ERROR_CODE_START_INDEX = 10; // エラーコードの開始位置
     private const ERROR_CODE_LENGTH = 2; // エラーコードの長さ
     private const OFFSET_PUBLIC_KEY_MAC = 12; // 公開鍵インポート結果におけるMAC値格納位置
+    private const TMK_POS_KEY = 12; // TMK開始位置 : ヘッダー開始(1) + 区切り文字(1) + ヘッダー(6) + 応答コード(2) + エラーコード(2)
+    private const TMK_LEN = 97; // TMK長
     private const IPEK_POS_KEY_LMK = 12; // LMK開始位置 : ヘッダー開始(1) + 区切り文字(1) + ヘッダー(6) + 応答コード(2) + エラーコード(2)
     private const KCV_LEN = 6; // Key Check Value 長
 
@@ -414,5 +416,19 @@ class HSMResponseParser
         // 位置12から取得したASCII文字列をそのまま16進数文字列として返す
         $resultString = substr($responseData, 12);
         return strtoupper($resultString);
+    }
+
+    /**
+     * Generate Key 応答(A1)からTMKとチェック値を抽出
+     *
+     * @param string $responseData レスポンスデータ
+     * @return array{tmk: string, checkValue: string} TMKとチェック値
+     */
+    public function parseResponseGenerateKey(string $responseData): array
+    {
+        $tmkWithCheck['tmk'] = substr($responseData, self::TMK_POS_KEY, self::TMK_LEN);
+        $tmkWithCheck['checkValue'] = substr($responseData, self::TMK_POS_KEY + self::TMK_LEN);
+
+        return $tmkWithCheck;
     }
 }

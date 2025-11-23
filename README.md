@@ -19,6 +19,7 @@ payShield10K HSMの各種コマンドを実行できます。主に以下の機�
 - **PIN暗号化変換**: ZPKで暗号化されたPIN BlockをDUKPTの鍵(BDK)で暗号化されたPIN Blockに変換
 - **PINブロックECB復号化**: 復号化キーで暗号化されたPIN BlockをECBモードで復号化し、オプションでPINを取得
 - **データブロックECB復号化（BDK使用）**: BDKを使用してECBモードでデータブロックを復号化
+- **TMK生成**: HSMを使用してTMK（Terminal Master Key）を生成
 
 ## ファイル構成
 
@@ -37,6 +38,7 @@ HSMPaymentCrypto/
 ├── TranslatePinFromEncryption.php # PIN暗号化変換ツール
 ├── DecryptECBforPIN.php     # PINブロックECB復号化ツール
 ├── DecryptECBwithBDK.php    # データブロックECB復号化ツール（BDK使用）
+├── GenerateTMK.php          # TMK生成ツール
 ├── profile.php               # ユーザー設定ファイル
 ├── README.md                 # このファイル
 └── src/                      # プログラムクラス群
@@ -925,3 +927,51 @@ decryptedText: 00283131313131313131313131313131313131313131
 - **16進数文字列入出力**: 入力・出力ともに16進数文字列形式
 
 > **注意**: `DecryptCBC.php`との違いは`modeFlag`が`'00'`(ECB)となる点のみです。BDKは`src/property.php`の`bdk_block_3des`から取得されます。
+
+#### GenerateTMK.php (A0/A1)(mode:B)
+
+TMK（Terminal Master Key）を生成するツールです。決済端末のマスターキーとして使用されます。
+
+##### 使用コマンド
+
+[A0/A1] Derive & Export a Key (mode:B)
+
+##### 使用方法
+
+```bash
+php GenerateTMK.php
+```
+
+##### パラメータ
+
+引数なし
+
+##### 実行例
+
+```bash
+php GenerateTMK.php
+```
+
+##### 期待値
+
+```
+=== TMK Generation Tool ===
+
+Connected to HSM: tcp://192.168.8.202:1500
+Send: 00001-A00FFFS%00#51T2N00S00
+Receive: 00001-A100S1009651TN00S0000...
+Disconnected from HSM
+=== RESULT ===
+TMK: S1009651TN00S0000...
+checkValueRightPaddedTo16Digits: ...0000000000
+```
+
+> **注意**: 生成されるTMKとチェック値は毎回異なります。上記は実行例であり、実際の出力は実行のたびに変わります。TMKはTR-31形式（`S1009651TN00S0000...`で始まる）で出力され、チェック値は16桁に右パディングされます。
+
+##### 機能説明
+
+- **TMK生成**: HSMを使用してTMK（Terminal Master Key）を生成
+- **キー管理**: 決済端末のマスターキーとして使用
+- **チェック値生成**: キーの整合性検証用のチェック値を生成
+- **TR-31形式**: 標準的なキーブロック形式で出力
+- **16桁パディング**: チェック値を16桁に右パディングして出力

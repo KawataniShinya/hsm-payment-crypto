@@ -384,4 +384,29 @@ class HSMClient
             return $plainText;
         });
     }
+
+    /**
+     * TMKを生成・エクスポートする
+     *
+     * @return array{tmk: string, checkValue: string} TMK With Check Value
+     * @throws Exception
+     */
+    public function exportTMK(): array
+    {
+        return $this->executeWithConnection(function ($connection) {
+            // 送信データ生成
+            $message = $this->commandGenerator->generateCommandGenerateKey();
+
+            // データ送信
+            $this->sendMessage($message, $connection);
+
+            // 応答受信
+            $responseData = $this->getResponseMessageWithCheckError($connection, 'E100013');
+
+            // 結果取得
+            $tmkWithCheck = $this->responseParser->parseResponseGenerateKey($responseData);
+
+            return $tmkWithCheck;
+        });
+    }
 }

@@ -703,4 +703,53 @@ class HSMCommandGenerator
 
         return $message;
     }
+
+    /**
+     * Generate Key コマンド(A0)の生成
+     * TMK生成用のコマンド
+     *
+     * @return string
+     */
+    public function generateCommandGenerateKey(): string
+    {
+        // パラメータ設定（整形済み）
+        $header = '00001'; // カウンター(固定)
+        $headerBodySeparator = '-';
+        $command = 'A0'; // Generate a Key
+        $mode = '0'; // Generate key
+        $keyType = 'FFF'; // ignored
+        $keySchemeLMK = 'S'; // not included in the authenticated data
+        $fieldDelimiter = '%';
+        $lmkIdentifier = '00';
+        $sectionDelimiter = '#';
+        $keyUsage = '51'; // Terminal key encryption, TMK
+        $algorithm = 'T2'; // double length DES key
+        $modeOfUse = 'N'; // No special restrictions apply.
+        $keyVersionNumber = '00';
+        $exportability = 'S'; // Sensitive
+        $numberOfOptionalBlocks = '00';
+
+        // ペイロード作成
+        $telegram =
+            $header .
+            $headerBodySeparator .
+            $command .
+            $mode .
+            $keyType .
+            $keySchemeLMK .
+            $fieldDelimiter .
+            $lmkIdentifier .
+            $sectionDelimiter .
+            $keyUsage .
+            $algorithm .
+            $modeOfUse .
+            $keyVersionNumber .
+            $exportability .
+            $numberOfOptionalBlocks;
+
+        // メッセージ生成（長さ + ペイロード）
+        $message = pack('H*', sprintf('%04X', strlen($telegram))) . $telegram;
+
+        return $message;
+    }
 }
