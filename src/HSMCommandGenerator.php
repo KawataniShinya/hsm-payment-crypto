@@ -229,4 +229,44 @@ class HSMCommandGenerator
 
         return $message;
     }
+
+    /**
+     * Import a Public Key コマンド(EO)の生成
+     *
+     * @param string $publicKey 公開鍵（バイナリデータ）
+     * @return string
+     */
+    public function generateCommandImportPublicKey(string $publicKey): string
+    {
+        // パラメータ設定（整形済み）
+        $header = '00001'; // カウンター(固定)
+        $headerBodySeparator = '-';
+        $command = 'EO'; // Import a Public Key
+        $pubKeyEncoding = '02'; // DER形式
+        $optVariantLMK = '~'; // not include
+        $optKeyBlockLMKDelimiter = '#';
+        $optKeyBlockLMKMode = 'N'; // No special restrictions apply.
+        $optKeyBlockLMKKeyVersionNo = '00';
+        $optKeyBlockLMKExportability = 'S'; // Sensitive
+        $optKeyBlockLMKNumberOfOptionalBlock = '00';
+
+        // ペイロード作成
+        $telegram =
+            $header .
+            $headerBodySeparator .
+            $command .
+            $pubKeyEncoding .
+            $publicKey .
+            $optVariantLMK .
+            $optKeyBlockLMKDelimiter .
+            $optKeyBlockLMKMode .
+            $optKeyBlockLMKKeyVersionNo .
+            $optKeyBlockLMKExportability .
+            $optKeyBlockLMKNumberOfOptionalBlock;
+
+        // メッセージ生成（長さ + ペイロード）
+        $message = pack('H*', sprintf('%04X', strlen($telegram))) . $telegram;
+
+        return $message;
+    }
 }

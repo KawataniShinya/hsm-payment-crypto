@@ -13,6 +13,7 @@ class HSMResponseParser
     private const RESPONSE_CODE_LENGTH = 2; // 応答コードの長さ
     private const ERROR_CODE_START_INDEX = 10; // エラーコードの開始位置
     private const ERROR_CODE_LENGTH = 2; // エラーコードの長さ
+    private const OFFSET_PUBLIC_KEY_MAC = 12; // 公開鍵インポート結果におけるMAC値格納位置
 
     /**
      * Encrypt Data Block 応答(M1)から結果を抽出
@@ -107,5 +108,16 @@ class HSMResponseParser
     {
         $responseCode = substr($responseData, 12, 8);
         return $responseCode;
+    }
+
+    /**
+     * Import a Public Key 応答(EP)から公開鍵MACを抽出
+     *
+     * @param string $responseData レスポンスデータ
+     * @return string 公開鍵MAC（バイナリデータ）
+     */
+    public function parseResponseImportPublicKey(string $responseData): string
+    {
+        return substr($responseData, self::OFFSET_PUBLIC_KEY_MAC);
     }
 }

@@ -204,4 +204,22 @@ class HSMClient
             return $macString;
         });
     }
+
+    /**
+     * 公開鍵をHSMにインポート
+     *
+     * @param string $publicKey 公開鍵（バイナリデータ）
+     * @return string 公開鍵MAC（バイナリデータ）
+     * @throws Exception
+     */
+    public function importPublicKey(string $publicKey): string
+    {
+        return $this->executeWithConnection(function ($connection) use ($publicKey) {
+            $message = $this->commandGenerator->generateCommandImportPublicKey($publicKey);
+            $this->sendMessage($message, $connection);
+            $responseData = $this->getResponseMessageWithCheckError($connection, 'E100007');
+            $pubKeyMac = $this->responseParser->parseResponseImportPublicKey($responseData);
+            return $pubKeyMac;
+        });
+    }
 }
