@@ -560,4 +560,52 @@ class HSMCommandGenerator
 
         return $message;
     }
+
+    /**
+     * Translate a PIN from BDK to BDK or ZPK Encryption (3DES & AES DUKPT) コマンド(G0)の生成
+     *
+     * @param string $zpk           ZPK
+     * @param string $ksn           KSN
+     * @param string $pinBlock      暗号化PIN BLOCK
+     * @param string $accountNumber アカウント番号 (MSの場合は000000000000固定)
+     * @return string
+     */
+    public function generateCommandTranslatePinFromEncryption(string $zpk, string $ksn, string $pinBlock, string $accountNumber): string
+    {
+        // パラメータ設定（整形済み）
+        $header = '00001'; // カウンター(固定)
+        $headerBodySeparator = '-';
+        $commandCode = 'G0'; // Translate a PIN from BDK to BDK or ZPK Encryption
+        $bdkAt32H = $this->hsmBdkBlock;
+        $zpkAt32H = strtoupper($zpk);
+        $ksnDescriptor = 'A05';
+        $destinationKsn = strtoupper($ksn);
+        $sourcePinBlock = strtoupper($pinBlock);
+        $SourcePINBlockFormatCode = '01';
+        $destinationPINBlockFormatCode = '01';
+        $primaryAccountNumber = $accountNumber;
+        $delimiter = '%';
+        $lmkIdentifier = sprintf('%02d', 0);
+
+        // ペイロード作成
+        $telegram =
+            $header .
+            $headerBodySeparator .
+            $commandCode .
+            $bdkAt32H .
+            $zpkAt32H .
+            $ksnDescriptor .
+            $destinationKsn .
+            $sourcePinBlock .
+            $SourcePINBlockFormatCode .
+            $destinationPINBlockFormatCode .
+            $primaryAccountNumber .
+            $delimiter .
+            $lmkIdentifier;
+
+        // メッセージ生成（長さ + ペイロード）
+        $message = pack('H*', sprintf('%04X', strlen($telegram))) . $telegram;
+
+        return $message;
+    }
 }

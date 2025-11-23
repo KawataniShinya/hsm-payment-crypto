@@ -325,4 +325,25 @@ class HSMClient
             return $resultHex;
         });
     }
+
+    /**
+     * PIN暗号化を変換する
+     *
+     * @param string $zpk ZPK
+     * @param string $ksn KSN
+     * @param string $pinBlock PIN Block（16進数文字列）
+     * @param string $accountNumber アカウント番号
+     * @return string 変換後のPIN Block（16進数文字列）
+     * @throws Exception
+     */
+    public function translatePinFromEncryption(string $zpk, string $ksn, string $pinBlock, string $accountNumber): string
+    {
+        return $this->executeWithConnection(function ($connection) use ($zpk, $ksn, $pinBlock, $accountNumber) {
+            $message = $this->commandGenerator->generateCommandTranslatePinFromEncryption($zpk, $ksn, $pinBlock, $accountNumber);
+            $this->sendMessage($message, $connection);
+            $responseData = $this->getResponseMessageWithCheckError($connection, 'E100011');
+            $destinationPinBlock = $this->responseParser->parseResponseTranslatePinFromEncryption($responseData);
+            return $destinationPinBlock;
+        });
+    }
 }

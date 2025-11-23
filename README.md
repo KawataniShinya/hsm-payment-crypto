@@ -16,6 +16,7 @@ payShield10K HSMの各種コマンドを実行できます。主に以下の機�
 - **IPEKエクスポート（TR-34形式）**: DeriveIPEK.phpで生成されたIPEKと公開鍵を使用してIPEKをTR-34形式でエクスポート
 - **データ復号化（CBCモード）**: 暗号化されたデータをCBCモードで復号化
 - **キーコンポーネントからキー生成**: 2つのキーコンポーネントから新たなキーを生成（ZPK/ZEK対応）
+- **PIN暗号化変換**: ZPKで暗号化されたPIN BlockをDUKPTの鍵(BDK)で暗号化されたPIN Blockに変換
 
 ## ファイル構成
 
@@ -31,6 +32,7 @@ HSMPaymentCrypto/
 ├── ExportIPEKformattedTR34.php # IPEKエクスポートツール（TR-34形式）
 ├── DecryptCBC.php            # データ復号化ツール（CBCモード）
 ├── FormKeyFromEncryptedComponents.php # キーコンポーネントからキー生成ツール
+├── TranslatePinFromEncryption.php # PIN暗号化変換ツール
 ├── profile.php               # ユーザー設定ファイル
 ├── README.md                 # このファイル
 └── src/                      # プログラムクラス群
@@ -750,3 +752,54 @@ Generated Key: S10096P0TN00S0000D76AC3B0402D799DA896E731FF7F98A6B5E7A90825B1A1B2
 - **TR-31形式**: 標準的なキーブロック形式（S10096...）で出力
 
 > **注意**: キーコンポーネントは`src/property.php`の`key_components`セクションに定義されています。ZPKは`zpk.kc1`と`zpk.kc2`から、ZEKは`zek.kc1`と`zek.kc2`から生成されます。
+
+#### TranslatePinFromEncryption.php (G0/G1)
+
+ZPK（Zone PIN Encryption Key）で暗号化されたPIN BlockをDUKPTの鍵(BDK)で暗号化されたPIN Blockに変換するツールです。
+
+##### 使用コマンド
+
+[G0/G1] Translate a PIN from BDK to BDK or ZPK Encryption (3DES & AES DUKPT)
+
+##### 使用方法
+
+```bash
+php TranslatePinFromEncryption.php <ZPK> <KSN> <PINBlock> <AccountNumber>
+```
+
+##### パラメータ
+
+- `ZPK`: Zone PIN Encryption Key（TR-31形式のキーブロック）
+- `KSN`: Key Serial Number（20文字の16進数）
+- `PINBlock`: 暗号化されたPIN Block（16文字の16進数）
+- `AccountNumber`: アカウント番号（12桁の数字）
+
+##### 実行例
+
+```bash
+php TranslatePinFromEncryption.php S10096P0TN00S0000D76AC3B0402D799DA896E731FF7F98A6FBAC138825AA477BC999928DDB4130F7B5D987A31CC0B3C4 5047303130020F200008 22828CA4BC2EA212 094800000003
+```
+
+##### 期待値
+
+```bash
+=== Translate PIN from Encryption Tool ===
+ZPK: S10096P0TN00S0000D76AC3B0402D799DA896E731FF7F98A6FBAC138825AA477BC999928DDB4130F7B5D987A31CC0B3C4
+KSN: 5047303130020F200008
+PIN Block: 22828CA4BC2EA212
+Account Number: 094800000003
+
+Connected to HSM: tcp://192.168.8.202:1500
+Send: 00001-G0S10096B0TN00S0000FD2196304A9F78B4844B0719E4DFBACD97ABA9E94A05EFB3BFD3F754CC626643675DE7D3A50FBE45S10096P0TN00S0000D76AC3B0402D799DA896E731FF7F98A6FBAC138825AA477BC999928DDB4130F7B5D987A31CC0B3C4A055047303130020F20000822828CA4BC2EA2120101094800000003%00
+Receive: 00001-G1001038E557F9D0C2BFEE01
+Disconnected from HSM
+=== RESULT ===
+Destination PIN Block: 38E557F9D0C2BFEE
+```
+
+##### 機能説明
+
+- **PIN暗号化変換**: ZPKで暗号化されたPIN BlockをDUKPTの鍵(BDK)で暗号化されたPIN Blockに変換
+- **暗号化方式変換**: 異なる暗号化キー間でのPIN Block変換に対応
+- **16進数文字列入出力**: 入力・出力ともに16進数文字列形式
+- **TR-31キー形式対応**: ZPKはTR-31形式のキーブロック形式に対応

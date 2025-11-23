@@ -383,4 +383,21 @@ class HSMResponseParser
         $resultHex = substr(bin2hex($responseData), 24, -12);
         return $resultHex;
     }
+
+    /**
+     * Translate PIN from Encryption 応答からPIN Blockを抽出
+     *
+     * @param string $responseData レスポンスデータ
+     * @return string 変換後のPIN Block（16進数文字列）
+     */
+    public function parseResponseTranslatePinFromEncryption(string $responseData): string
+    {
+        // 参考実装: substr($responseData, 14, 16)で16バイト取得
+        // 実際の応答では、位置14から16バイト取得したデータがASCII文字列としてPIN Blockを含む
+        // その最初の16文字が16進数文字列としてのPIN Block
+        $block = substr($responseData, 14, 16);
+        // ASCII文字列として16進数文字列を抽出（最初の16文字）
+        $pinBlockHex = substr($block, 0, 16);
+        return strtoupper($pinBlockHex);
+    }
 }
