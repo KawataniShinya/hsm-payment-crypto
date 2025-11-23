@@ -329,4 +329,71 @@ class HSMCommandGenerator
 
         return $message;
     }
+
+    /**
+     * Derive & Export a Key コマンド(A0, mode:B)の生成（TR-31形式）
+     *
+     * @param string $iksn IKSN（Initial Key Serial Number）
+     * @return string
+     */
+    public function generateCommandDeriveAndExportKeyFormattedTR31(string $iksn): string
+    {
+        // パラメータ設定（整形済み）
+        $header = '00001'; // カウンター(固定)
+        $headerBodySeparator = '-';
+        $command = 'A0'; // Generate a Key
+        $mode = 'B'; // Derive key and encrypt under ZMK (or TMK or Current BDK)
+        $keyType = 'FFF'; // ignored
+        $keySchemeLMK = 'S'; // not included in the authenticated data
+        $deriveKeyMode = '0'; // DUKPT - Derive IKEY from DUKPT Master Key
+        $dukptMasterKeyType = '1'; // BDK-1
+        $dukptMasterKey = $this->hsmBdkBlock;
+        $ksn = $iksn;
+        $tmk = $this->hsmTmkBlock;
+        $keySchemeTMK = 'R'; // TR-31 Key Block
+        $delimiter = '#';
+        $keyUsage = 'B1'; // DUKPT Initial Key, IKEY
+        $algorithm = 'T2'; // double length DES key
+        $modeOfUse = 'N'; // No special restrictions apply.
+        $keyVersionNumber = '00';
+        $exportability = 'S'; // Sensitive
+        $numberOfOptionalBlocks = '00';
+        // 以下バージョンB用追加パラメータ
+        $delimiter2Tr31 = '&';
+        $modifiedExportValue = 'N';
+        $delimiter3Tr31 = '!';
+        $keyBlockVersionIDTr31 = 'B';
+
+        // ペイロード作成
+        $telegram =
+            $header .
+            $headerBodySeparator .
+            $command .
+            $mode .
+            $keyType .
+            $keySchemeLMK .
+            $deriveKeyMode .
+            $dukptMasterKeyType .
+            $dukptMasterKey .
+            $ksn .
+            $tmk .
+            $keySchemeTMK .
+            $delimiter .
+            $keyUsage .
+            $algorithm .
+            $modeOfUse .
+            $keyVersionNumber .
+            $exportability .
+            $numberOfOptionalBlocks .
+            // 以下バージョンB用追加パラメータ
+            $delimiter2Tr31 .
+            $modifiedExportValue .
+            $delimiter3Tr31 .
+            $keyBlockVersionIDTr31;
+
+        // メッセージ生成（長さ + ペイロード）
+        $message = pack('H*', sprintf('%04X', strlen($telegram))) . $telegram;
+
+        return $message;
+    }
 }

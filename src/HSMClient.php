@@ -251,4 +251,22 @@ class HSMClient
             return $encryptedTmkBase64Encoded;
         });
     }
+
+    /**
+     * IPEKを生成してエクスポート（TR-31形式）
+     *
+     * @param string $iksn IKSN（Initial Key Serial Number）
+     * @return array{ipekTr31: string, kcv: string} IPEK(TR-31形式)とKCV
+     * @throws Exception
+     */
+    public function exportIPEKFormattedTR31(string $iksn): array
+    {
+        return $this->executeWithConnection(function ($connection) use ($iksn) {
+            $message = $this->commandGenerator->generateCommandDeriveAndExportKeyFormattedTR31($iksn);
+            $this->sendMessage($message, $connection);
+            $responseData = $this->getResponseMessageWithCheckError($connection, 'E100009');
+            $ipekWithKcv = $this->responseParser->parseResponseDeriveAndExportKeyFormattedTR31($responseData);
+            return $ipekWithKcv;
+        });
+    }
 }

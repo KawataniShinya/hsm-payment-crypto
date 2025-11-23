@@ -11,16 +11,18 @@ payShield10K HSMの各種コマンドを実行できます。主に以下の機�
 - **データ暗号化**: 任意のデータの暗号化
 - **公開鍵インポート**: X.509形式のBase64エンコードされた公開鍵をHSMにインポート
 - **公開鍵暗号化TMKエクスポート**: インポートされた公開鍵のMAC値を使用してTMKを公開鍵で暗号化してエクスポート
+- **IPEK生成（TR-31形式）**: BDKとTMKを使用してIPEKを生成し、TR-31形式で出力
 
 ## ファイル構成
 
 ```
-HSMPaymentCryptoGit/
+HSMPaymentCrypto/
 ├── GenerateSwipeData.php    # スワイプデータ生成ツール
 ├── ParseSwipeData.php        # スワイプデータパーサー
 ├── Encrypt.php               # データ暗号化ツール
 ├── ImportPublicKey.php       # 公開鍵インポートツール
 ├── ExportTMKEncryptedByImportedPublicKey.php # 公開鍵暗号化TMKエクスポートツール
+├── GenerateIPEKformattedTR31.php # IPEK生成ツール（TR-31形式）
 ├── profile.php               # ユーザー設定ファイル
 ├── README.md                 # このファイル
 └── src/                      # プログラムクラス群
@@ -444,3 +446,109 @@ Disconnected from HSM
 ```
 
 > **注意**: 生成される暗号化TMKは毎回異なります。上記は実行例であり、実際の出力は実行のたびに変わります。出力はBase64エンコードされた暗号化TMKです。
+
+##### (参考)復号化TMKの取得
+
+登録した公開鍵のペアとなる秘密鍵およびそのパスワードを用いて、暗号化メッセージを復号化してTMKを取得することができます。
+
+```
+echo "o1qHg85prHDMVy5fTvw8ww/8ROVmRphwc0Wk15KazlZMIgaoBsrXqjgZqRMDxr2nhGgGineGYugt0PzRm4YpST2K6/fS8qp8o1rqPEzjtFBi5wZlUFhb6DaXfNc5AVL3elPpBitirjD7XDcS5+Ujnhd5gKsxnpSSbG4UFJx9SFvrDZp5Xanz3mXx4nfU9rP4+K9R6QzawK8kXDfmmhtpetlARTV/3XUIXiUQlTI7dI62iG+VaDMkeOpPd0JehMcqiFpR3JITuhn7EsFhiDB/HR3wzEGPm9duSgoERHQyksnKywH0U0SBV09ZLfjNyOxQPG4zMGonKDpby/lVZ08GBQ==" \
+| base64 -d \
+| openssl pkeyutl -decrypt \
+  -inkey <(cat <<'PEM'
+-----BEGIN ENCRYPTED PRIVATE KEY-----
+MIIFLTBXBgkqhkiG9w0BBQ0wSjApBgkqhkiG9w0BBQwwHAQIHeeWxIWfVhwCAggA
+MAwGCCqGSIb3DQIJBQAwHQYJYIZIAWUDBAEqBBCQC4bvpxLVy29qFllHEoYbBIIE
+0Jr0yrllio7doxl5/uK3FOQ8fnVAd/srTasjGjVtu64mpNSa/J4rMghdk4bXC7uw
+p1hSRmk2gOhqdOri6faN6Inij+86IWKFbyuuoRO43nwKMYHAHTdKfU4Yyeg9MkZA
+PWr9bfzQioAoL3ZVOm+GXIAdSGoK4O21oJTEnbpMXI2p2hfV2PS2kTIfl2uIm/Wp
+D6/lpb9vkA/FXf43UjcpPOcAWBi/D0EIdTnALHRW+K6Uw3d1dKF3/U78VHufHaab
+2AoWnIFM9sdRj3ryrIdg+0wZP+RUDjitUiFLw4KmufW/FZutPxrsWhCs9q/zUzx+
+gIRZow6LEGrBFo3DDOB3C53saZTAfUSVCO5zBnlrM6V/emhkk3ah0Z5xgGvWKDb1
+vzC7JvSPSKxQtGzS+yEkOBIdb7Uww236ptXECRQnUbevOaxdbZ1vbtk6VCsWpxXl
+GPzsP6MlOp2u6Jy21YM7N2oMTld/u5rxcEPH51Yuon2SG6bqFxdq1iFj69a+CDJ4
+dRSooedZq65F2Z3FwH7f37QqoJLAdYp/Fy425kSE6QylMFMKNN7+GGtnh0wvloAI
+feA85tHwbZXchRSGSYZmvwKjGnFEvCas1lUb63z7G/NP+55ozIH7Dr8V4kNvRX6x
+D8T4t07/0dulFE8LYOcnvIarH9i0Ey3+/2uCsR1JQBLK2a79IHvyeH+V0u/pdkUY
+IN0fZKIGjKU19+93kDxj3SD8/qdJnh4VnOZ5OtTerxT3TgkF4UT5fqbhLNJW4V0v
+xFivLlG+So0wEjpoqdNJPcd0ORdN4FTKgGjcSZvkbPnAJts0frWbzIVNTmg9+Tp5
+2VZRoDax1O2Y021G1IXDqn2BNDD1xuPB/ec1lOAxPBYFpp/U2Ti3NTGqwwAfilJl
+FQDAQScWrU2NHHh4dC2VzBBXrAPPkfiZBMDc4YmCpWGNR0QCgD/Gb6ZNKPpFbJ96
+2l7daWGr4L9DlGbNYbnYAztZoY/LVX/2tN95YRpNXDLhDXgxbhOVNy0FVoWyBQL8
+wS46nHyPau5cacn11kpBr02o9pDRtHjCURRXymy3WOxRYwchX3PkntwB0+9zWLTV
+RNCAfqO5A7dSRjtiIfJqWK3JkGt477cPd0OGqbNnq9NikO/yY31VEzK4d2sGP3VE
+pHI+FTUle3SBiDMVZAdinPpwjWwHG95eeihD2EbgOmwAu1vX4VnzfksD63hM0OT4
+UqZda27/m4P5K4ZMLgshH/Juj+WtoHGaNZpC4tzR0xUwJ/878wVF6S64qKv1VCW7
+elkrh+BvseL1EXVgsm9p+GvnflDmDc86V2SRcr4AqNDmI8KNQKWQrZKQQyMDdaAl
+EESli8gSSwrh02v+W9U8wkIPzfz6mHLoPlehzo9Xr3M6RHyUGTocV5K5ILZebTgP
+wFn2ZruDL/grBApLA9+2qvq5nlGwL1jaUcGvtNEPvLamzxcuMrQKDv9FMXiEkBDz
+RxcRe1UYNx4TPD7OiwNdQ3QSlG6q+9BkhPI4BG6CYYyjIV2hmga0KX8qGECcrmh4
+ArbgmCgn70BBe5W3rBnqPekzN/hgeBEoPCtA6JRQP36luQfyHVD30MDuyLgVZiRP
+MEHmCKYHUj4CourIU2Cc6pCvLbnHM7x89jIWGTw0kjEo
+-----END ENCRYPTED PRIVATE KEY-----
+PEM
+) \
+  -passin pass:password \
+  -pkeyopt rsa_padding_mode:oaep \
+| xxd -p -c 256
+```
+
+##### 機能説明
+
+- **TMK暗号化エクスポート**: インポートされた公開鍵のMAC値を使用してTMKを公開鍵で暗号化
+- **RSA暗号化**: RSA公開鍵を使用したOAEP方式での暗号化
+- **Base64出力**: 暗号化されたTMKをBase64エンコードして出力
+- **16進数入力**: 公開鍵MAC値は16進数文字列として入力（内部でバイナリに変換）
+
+> **注意**: このツールは`ImportPublicKey.php`で取得した公開鍵MAC値を使用します。`src/property.php`の`tmk_block`と`tmk_mac`を使用してTMKを暗号化します。
+
+#### GenerateIPEKformattedTR31.php (A0)(mode:B)
+
+IPEK（Initial PIN Encryption Key）を生成するツールです。BDKとTMKを使用してIPEKを生成し、TR-31形式で出力します。本ツールはTR-31形式のIPEKを生成します。TR-34形式のIPEKが必要な場合は別途対応ツールを使用してください。
+
+##### 使用コマンド
+
+[A0] Derive & Export a Key (mode:B)
+
+##### 使用方法
+
+```bash
+php GenerateIPEKformattedTR31.php <IKSN>
+```
+
+##### パラメータ
+
+- `IKSN`: Initial Key Serial Number（15文字の16進数）
+
+##### 実行例
+
+```bash
+php GenerateIPEKformattedTR31.php 504730313000002
+```
+
+##### 期待値
+
+```
+=== IPEK Generation Tool (TR-31 Format) ===
+IKSN: 504730313000002
+
+Connected to HSM: tcp://192.168.8.202:1500
+Send: 00001-A0BFFFS01S10096B0TN00S0000FD2196304A9F78B4844B0719E4DFBACD97ABA9E94A05EFB3BFD3F754CC626643675DE7D3A50FBE45504730313000002S1009651TB00S000037B591D7EE516769C656FBF603B9EF7A4121DB4BC3524E267F1C4C7F31DF0B44FF17EABD9EE2D68FR#B1T2N00S00&N!B
+Receive: 00001-A100S10096B1TN00S0000...RB0080B1TN00N0000...C49891
+Disconnected from HSM
+=== RESULT ===
+ipekTr31: RB0080B1TN00N000051EBB6E31C1D6BAEFBEF2775F195B471B1F0BE0CCB0CB1A893D31050
+kcv: 3443A1
+```
+
+> **注意**: 生成されるIPEKとKCVは毎回異なります。上記は実行例であり、実際の出力は実行のたびに変わります。IPEKはTR-31形式（`RB0080B1TN00N0000...`で始まる）で出力され、KCVは6文字の16進数で出力されます。
+
+##### 機能説明
+
+- **IPEK生成（TR-31形式）**: BDKとTMKを使用してIPEK（Initial PIN Encryption Key）を生成し、TR-31形式で出力
+- **DUKPT対応**: IKSNを使用したDUKPTキー派生に対応
+- **TR-31形式**: 標準的なキーブロック形式（TR-31）でIPEKを出力
+- **KCV生成**: キーの整合性検証用のKCV（Key Check Value）を生成
+- **キー管理**: `src/property.php`のBDKとTMKを使用
+
+> **注意**: BDKは`src/property.php`の`bdk_block_3des`、TMKは`src/property.php`の`tmk_block`から取得されます。本ツールはTR-31形式のIPEKを生成します。TR-34形式のIPEKが必要な場合は別途対応ツールを使用してください。
