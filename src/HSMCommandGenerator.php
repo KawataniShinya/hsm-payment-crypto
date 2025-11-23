@@ -608,4 +608,49 @@ class HSMCommandGenerator
 
         return $message;
     }
+
+    /**
+     * Decrypt Data Block コマンド(M2, ECB)の生成
+     * 復号化キーを使用したECBモードでの復号化コマンド
+     *
+     * @param string $pinBlock PIN Block（16進数文字列）
+     * @param string $decryptKey 復号化キー（TR-31形式のキーブロック）
+     * @return string
+     */
+    public function generateCommandDecryptDataBlockWithECB(string $pinBlock, string $decryptKey): string
+    {
+        // パラメータ設定（整形済み）
+        $header = '00001'; // カウンター(固定)
+        $headerBodySeparator = '-';
+        $commandCode = 'M2'; // Decrypt Data Block
+        $modeFlag = sprintf('%02d', 0); // ECB
+        $inputFormatFlag = sprintf('%01d', 1); // Hex-Encoded Binary
+        $outputFormatFlag = sprintf('%01d', 1); // Hex-Encoded Binary
+        $keyType = 'FFF'; // For a Key Block LMK (This field is ignored)
+        $keyAt32 = strtoupper($decryptKey);
+        $messageLength = sprintf('%04X', strlen($pinBlock));
+        $encryptedMessage = strtoupper($pinBlock);
+        $endMessageDelimiter = '';
+        $messageTrailer = '';
+
+        // ペイロード作成
+        $telegram =
+            $header .
+            $headerBodySeparator .
+            $commandCode .
+            $modeFlag .
+            $inputFormatFlag .
+            $outputFormatFlag .
+            $keyType .
+            $keyAt32 .
+            $messageLength .
+            $encryptedMessage .
+            $endMessageDelimiter .
+            $messageTrailer;
+
+        // メッセージ生成（長さ + ペイロード）
+        $message = pack('H*', sprintf('%04X', strlen($telegram))) . $telegram;
+
+        return $message;
+    }
 }

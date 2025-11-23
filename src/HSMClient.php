@@ -346,4 +346,23 @@ class HSMClient
             return $destinationPinBlock;
         });
     }
+
+    /**
+     * データブロックをECBモードで復号化して文字列として返す
+     *
+     * @param string $encryptedText 暗号化されたテキスト
+     * @param string $decryptKey 復号化キー（TR-31形式のキーブロック）
+     * @return string 復号化された文字列
+     * @throws Exception
+     */
+    public function decryptDataBlockWithECBToString(string $encryptedText, string $decryptKey): string
+    {
+        return $this->executeWithConnection(function ($connection) use ($encryptedText, $decryptKey) {
+            $message = $this->commandGenerator->generateCommandDecryptDataBlockWithECB($encryptedText, $decryptKey);
+            $this->sendMessage($message, $connection);
+            $responseData = $this->getResponseMessageWithCheckError($connection, 'E100010');
+            $plainText = $this->responseParser->parseResponseDecryptDataBlockNoIvToHex($responseData);
+            return $plainText;
+        });
+    }
 }

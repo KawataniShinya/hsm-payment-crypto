@@ -17,6 +17,7 @@ payShield10K HSMの各種コマンドを実行できます。主に以下の機�
 - **データ復号化（CBCモード）**: 暗号化されたデータをCBCモードで復号化
 - **キーコンポーネントからキー生成**: 2つのキーコンポーネントから新たなキーを生成（ZPK/ZEK対応）
 - **PIN暗号化変換**: ZPKで暗号化されたPIN BlockをDUKPTの鍵(BDK)で暗号化されたPIN Blockに変換
+- **PINブロックECB復号化**: 復号化キーで暗号化されたPIN BlockをECBモードで復号化し、オプションでPINを取得
 
 ## ファイル構成
 
@@ -33,6 +34,7 @@ HSMPaymentCrypto/
 ├── DecryptCBC.php            # データ復号化ツール（CBCモード）
 ├── FormKeyFromEncryptedComponents.php # キーコンポーネントからキー生成ツール
 ├── TranslatePinFromEncryption.php # PIN暗号化変換ツール
+├── DecryptECBforPIN.php     # PINブロックECB復号化ツール
 ├── profile.php               # ユーザー設定ファイル
 ├── README.md                 # このファイル
 └── src/                      # プログラムクラス群
@@ -43,6 +45,7 @@ HSMPaymentCrypto/
     ├── HSMSocketManager.php    # HSMソケット管理
     ├── EmvParser.php          # EMVデータパーサー
     ├── PublicKeyUtil.php      # 公開鍵ユーティリティ
+    ├── PINUtil.php            # PIN復号化ユーティリティ
     └── property.php           # HSM接続設定（内部設定）
 ```
 
@@ -803,3 +806,77 @@ Destination PIN Block: 38E557F9D0C2BFEE
 - **暗号化方式変換**: 異なる暗号化キー間でのPIN Block変換に対応
 - **16進数文字列入出力**: 入力・出力ともに16進数文字列形式
 - **TR-31キー形式対応**: ZPKはTR-31形式のキーブロック形式に対応
+
+#### DecryptECBforPIN.php (M2/M3)
+
+PINブロックをECBモードで復号化するツールです。復号化キーで暗号化されたPIN Blockを復号化し、オプションでPANを指定することでPINを取得できます。
+
+##### PIN取得の流れ（XOR処理）
+
+PANと復号化されたPINデータからPINを取得する処理の概要：
+
+1. **復号化PINデータからPIN Block DUKPTを抽出**
+   - 復号化されたPINデータの最初の4文字（16進数）がメッセージ長
+   - 次のメッセージ長分がPIN Block DUKPT（PINの桁数情報とXORマスクを含む）
+
+2. **PANからアカウント番号を生成**
+   - PANのチェックデジット（最後の1桁）を削除
+   - `'0000' + PANの後ろ12桁`で16文字のアカウント番号を生成
+
+3. **XOR演算でPINを取得**
+   - アカウント番号（16進数）とPIN Block DUKPT（16進数）をXOR演算
+   - 結果からPINの桁数分を抽出してPINを取得
+
+##### 使用コマンド
+
+[M2/M3] Decrypt Data Block (ECB mode)
+
+##### 使用方法
+
+```bash
+php DecryptECBforPIN.php <PINBlock> <DecryptKey> [PAN]
+```
+
+##### パラメータ
+
+- `PINBlock`: 暗号化されたPIN Block（16文字の16進数）
+- `DecryptKey`: 復号化キー（TR-31形式のキーブロック）
+- `PAN`: Primary Account Number（オプション、PIN取得時に必要）
+
+##### 実行例
+
+```bash
+# PIN Blockのみ復号化
+php DecryptECBforPIN.php 38E557F9D0C2BFEE S10096D0TN00S0000B28CA98B651D07A45310FA75C45D046C0C61439D6601D3262D9FFA804C796D1FFF050B964793A84F
+
+# PIN Block復号化とPIN取得
+php DecryptECBforPIN.php 38E557F9D0C2BFEE S10096D0TN00S0000B28CA98B651D07A45310FA75C45D046C0C61439D6601D3262D9FFA804C796D1FFF050B964793A84F 6210948000000037
+```
+
+##### 期待値
+
+```bash
+=== Decrypt ECB Tool ===
+PIN Block: 38E557F9D0C2BFEE
+Decrypt Key: S10096D0TN00S0000B28CA98B651D07A45310FA75C45D046C0C61439D6601D3262D9FFA804C796D1FFF050B964793A84F
+PAN: 6210948000000037
+
+Connected to HSM: tcp://192.168.8.202:1500
+Send: 00001-M20011FFFS10096D0TN00S0000B28CA98B651D07A45310FA75C45D046C0C61439D6601D3262D9FFA804C796D1FFF050B964793A84F001038E557F9D0C2BFEE
+Receive: 00001-M30000100A123D1E7890FFFC
+Disconnected from HSM
+=== RESULT ===
+DUKPT復号化PINデータ: 00100A123D1E7890FFFC
+PIN: 1234567890
+```
+
+##### 機能説明
+
+- **ECB復号化**: 復号化キーで暗号化されたPIN BlockをECBモードで復号化
+- **PIN取得**: PANが指定された場合、復号化されたPINデータからPINを取得（XOR処理）
+- **16進数文字列入出力**: 入力・出力ともに16進数文字列形式
+- **TR-31キー形式対応**: 復号化キーはTR-31形式のキーブロック形式に対応
+- **0x80終端処理**: 復号化結果から0x80までのデータを抽出
+- **オプション引数**: PANはオプション引数で、指定されなくてもエラーにならない
+
+> **注意**: PIN取得には`PINUtil.php`のXOR処理を使用します。PANからアカウント番号を生成し、復号化されたPINデータとXOR演算することでPINを取得します。

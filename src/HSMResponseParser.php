@@ -400,4 +400,19 @@ class HSMResponseParser
         $pinBlockHex = substr($block, 0, 16);
         return strtoupper($pinBlockHex);
     }
+
+    /**
+     * Decrypt Data Block 応答(M2, ECB)を解析して16進数文字列として返す
+     *
+     * @param string $responseData レスポンスデータ
+     * @return string 復号化された16進数文字列
+     */
+    public function parseResponseDecryptDataBlockNoIvToHex(string $responseData): string
+    {
+        // 参考実装: substr(bin2hex($responseData), 24)
+        // 実際の応答では位置12から復号化結果がASCII文字列として含まれる
+        // 位置12から取得したASCII文字列をそのまま16進数文字列として返す
+        $resultString = substr($responseData, 12);
+        return strtoupper($resultString);
+    }
 }

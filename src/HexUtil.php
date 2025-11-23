@@ -59,6 +59,32 @@ class HexUtil
     }
 
     /**
+     * 16進数文字列を終端を0x80として本文を抽出。
+     *
+     * @param string $hexString
+     *
+     * @return string
+     */
+    public static function getHexUntil80(string $hexString): string
+    {
+        $charArray = [];
+        for ($i = 0; $i < strlen($hexString); $i += 2) {
+            // 2桁ずつ取り出して16進数をバイナリデータに変換
+            $hexPair = substr($hexString, $i, 2);
+
+            // '80'に達したら処理を終了
+            if (strtoupper($hexPair) === '80') {
+                break;
+            }
+
+            // 収集したバイトを結合して戻す
+            $charArray[] = $hexPair;
+        }
+
+        return implode('', $charArray);
+    }
+
+    /**
      * XORチェックサムを算出する
      * 指定された16進数文字列の各バイトをXOR演算して結果を返す
      *
