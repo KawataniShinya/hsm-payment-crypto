@@ -365,4 +365,23 @@ class HSMClient
             return $plainText;
         });
     }
+
+    /**
+     * データブロックをECBモードで復号化して文字列として返す（BDK使用）
+     *
+     * @param string $encryptedText 暗号化されたテキスト
+     * @param string $ksn KSN
+     * @return string 復号化された文字列
+     * @throws Exception
+     */
+    public function decryptDataBlockWithECBWithBDKToString(string $encryptedText, string $ksn): string
+    {
+        return $this->executeWithConnection(function ($connection) use ($encryptedText, $ksn) {
+            $message = $this->commandGenerator->generateCommandDecryptDataBlockWithECBWithBDK($encryptedText, $ksn);
+            $this->sendMessage($message, $connection);
+            $responseData = $this->getResponseMessageWithCheckError($connection, 'E100010');
+            $plainText = $this->responseParser->parseResponseDecryptDataBlockNoIvToHex($responseData);
+            return $plainText;
+        });
+    }
 }

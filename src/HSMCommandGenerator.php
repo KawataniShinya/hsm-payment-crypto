@@ -653,4 +653,54 @@ class HSMCommandGenerator
 
         return $message;
     }
+
+    /**
+     * Decrypt Data Block コマンド(M2, ECB with BDK)の生成
+     * BDKを使用したECBモードでの復号化コマンド
+     *
+     * @param string $encryptedText 暗号化文字列
+     * @param string $ksn           KSN
+     *
+     * @return string
+     */
+    public function generateCommandDecryptDataBlockWithECBWithBDK(string $encryptedText, string $ksn): string
+    {
+        // パラメータ設定（整形済み）
+        $header = '00001'; // カウンター(固定)
+        $headerBodySeparator = '-';
+        $commandCode = 'M2'; // Decrypt Data Block
+        $modeFlag = sprintf('%02d', 0); // ECB
+        $inputFormatFlag = sprintf('%01d', 1); // Hex-Encoded Binary
+        $outputFormatFlag = sprintf('%01d', 0); // Binary
+        $keyType = 'FFF'; // For a Key Block LMK (This field is ignored)
+        $keyAt32 = $this->hsmBdkBlock;
+        $ksnDescriptor = 'A05';
+        $ksnAt20 = strtoupper($ksn);
+        $messageLength = sprintf('%04X', strlen($encryptedText));
+        $encryptedMessage = strtoupper($encryptedText);
+        $endMessageDelimiter = '';
+        $messageTrailer = '';
+
+        // ペイロード作成
+        $telegram =
+            $header .
+            $headerBodySeparator .
+            $commandCode .
+            $modeFlag .
+            $inputFormatFlag .
+            $outputFormatFlag .
+            $keyType .
+            $keyAt32 .
+            $ksnDescriptor .
+            $ksnAt20 .
+            $messageLength .
+            $encryptedMessage .
+            $endMessageDelimiter .
+            $messageTrailer;
+
+        // メッセージ生成（長さ + ペイロード）
+        $message = pack('H*', sprintf('%04X', strlen($telegram))) . $telegram;
+
+        return $message;
+    }
 }

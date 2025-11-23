@@ -18,6 +18,7 @@ payShield10K HSMの各種コマンドを実行できます。主に以下の機�
 - **キーコンポーネントからキー生成**: 2つのキーコンポーネントから新たなキーを生成（ZPK/ZEK対応）
 - **PIN暗号化変換**: ZPKで暗号化されたPIN BlockをDUKPTの鍵(BDK)で暗号化されたPIN Blockに変換
 - **PINブロックECB復号化**: 復号化キーで暗号化されたPIN BlockをECBモードで復号化し、オプションでPINを取得
+- **データブロックECB復号化（BDK使用）**: BDKを使用してECBモードでデータブロックを復号化
 
 ## ファイル構成
 
@@ -35,6 +36,7 @@ HSMPaymentCrypto/
 ├── FormKeyFromEncryptedComponents.php # キーコンポーネントからキー生成ツール
 ├── TranslatePinFromEncryption.php # PIN暗号化変換ツール
 ├── DecryptECBforPIN.php     # PINブロックECB復号化ツール
+├── DecryptECBwithBDK.php    # データブロックECB復号化ツール（BDK使用）
 ├── profile.php               # ユーザー設定ファイル
 ├── README.md                 # このファイル
 └── src/                      # プログラムクラス群
@@ -880,3 +882,46 @@ PIN: 1234567890
 - **オプション引数**: PANはオプション引数で、指定されなくてもエラーにならない
 
 > **注意**: PIN取得には`PINUtil.php`のXOR処理を使用します。PANからアカウント番号を生成し、復号化されたPINデータとXOR演算することでPINを取得します。
+
+#### DecryptECBwithBDK.php (M2/M3)
+
+BDKを使用してECBモードでデータブロックを復号化するツールです。
+
+##### 使用コマンド
+
+[M2/M3] Decrypt Data Block (ECB mode with BDK)
+
+##### 使用方法
+
+```bash
+php DecryptECBwithBDK.php <encryptedText> <KSN>
+```
+
+##### パラメータ
+
+- `encryptedText`: 暗号化されたテキスト（16進数文字列）
+- `KSN`: Key Serial Number
+
+##### 実行例
+
+```bash
+php DecryptECBwithBDK.php 0BC7FE2D7E087BA40BC7FE2D7E087BA40BC7FE2D7E087BA40BC7FE2D7E087BA40BC7FE2D7E087BA4 50473030390000400000
+```
+
+##### 期待値
+
+```
+=== RESULT ===
+decryptedText: 00283131313131313131313131313131313131313131
+```
+
+> **注意**: 期待値の最初の4桁（0028）が長さHEXで、続く文字列が復号化結果です。0028は16進数で40（10進数）を表し、続く文字列は40文字（20バイト）なので、長さが合っています。
+
+##### 機能説明
+
+- **ECB復号化**: BDKを使用してECBモードでデータブロックを復号化
+- **BDK使用**: `src/property.php`の`bdk_block_3des`からBDKを取得
+- **KSN対応**: DUKPT方式のKSNを使用した復号化
+- **16進数文字列入出力**: 入力・出力ともに16進数文字列形式
+
+> **注意**: `DecryptCBC.php`との違いは`modeFlag`が`'00'`(ECB)となる点のみです。BDKは`src/property.php`の`bdk_block_3des`から取得されます。
