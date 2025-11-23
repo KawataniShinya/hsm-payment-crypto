@@ -1076,3 +1076,112 @@ isVerified: Verified
 - **DUKPT対応**: KSNを使用した動的キー管理に対応
 - **16進数文字列対応**: 入力データは16進数文字列形式で指定
 - **検証結果表示**: Verified/Not Verifiedで結果を表示
+
+## 設定ファイル
+
+### profile.php
+
+ユーザーが編集する設定ファイルです。ICカード用とMSカード用の設定を分けて管理できます。
+
+#### IC設定項目
+
+| 項目 | 説明 | 例 |
+|------|------|-----|
+| stx | 開始文字 | 02 |
+| ksn | キーシリアル番号 | 50473031300210000004 |
+| transResult | 取引結果 | 02 |
+| card_info_emv | EMV形式のカード情報 | 9f26081a28b00e36cbdd6b... |
+| data2 | オンラインPIN暗号文 | （空文字） |
+| data3 | カード情報平文 | 5a08358746ffffff0692... |
+| etx | 終了文字 | 03 |
+
+> **EMVタグの詳細**: `card_info_emv`と`data3`で使用されるEMVタグの詳細は[EMV® Specifications](https://www.emvco.com/specifications/)を参照してください。
+
+入力設定を一から作成することは難しいため、手始めとして、既存の設定から`ksn`だけ更新するような使い方が望ましい。\
+取得したswipe_dataやカード情報の決済を別端末で実施したい、次のKSNで決済する、などを想定。
+
+#### 取引結果（transResult）の値
+
+- `01`: 取引拒否
+- `02`: オンライン接続リクエスト
+- `03`: Advice
+- `04`: Offline承認
+- `FF`: 無効フラグ
+
+### src/property.php
+
+HSM接続設定と鍵情報を管理する内部設定ファイルです。通常は編集不要です。
+
+#### 主要設定項目
+
+| 項目 | 説明 | 例 |
+|------|------|-----|
+| direct_hosts | HSMサーバー接続先 | ['tcp://192.168.8.202:1500'] |
+| socket_connect_timeout | 接続タイムアウト（秒） | 5 |
+| socket_connect_retry_count | 接続リトライ回数 | 3 |
+| socket_receive_timeout | 受信タイムアウト（秒） | 3 |
+| bdk_block_3des | BDK鍵ブロック（3DES） | S10096B0TN00S0000FD219... |
+| key_components | キーコンポーネント設定 | zpk/zekのキーコンポーネント1,2 |
+
+## トラブルシューティング
+
+### よくあるエラー
+
+#### 1. HSM接続エラー
+
+```
+Error: Failed to connect to any HSM host
+```
+
+**対処法**: 
+- HSMサーバーが起動していることを確認
+- ネットワーク接続を確認
+- `src/property.php`の接続先設定を確認
+
+#### 2. HSM認証エラー
+
+```
+HSM Error: ResponseCode=M1, ErrorCode=27
+```
+
+**対処法**:
+- `src/property.php`の鍵情報（bdk_block_3des）が正しいことを確認
+- HSM管理者に鍵設定を確認
+
+#### 3. 引数エラー
+
+```
+Usage: php GenerateSwipeData.php <mode>
+  mode: 0 for MS, 1 for IC
+```
+
+**対処法**:
+- 正しい引数を指定（0: MS, 1: IC）
+
+### デバッグ
+
+開発時は`src/property.php`の`fullOutputFlg`を`true`に設定することで、HSMとの通信ログが詳細に出力されます。
+
+## 開発者向け情報
+
+### アーキテクチャ
+
+- **HSMClient**: HSMとの通信を管理
+- **HSMCommandGenerator**: HSMコマンドの生成
+- **HSMResponseParser**: HSMレスポンスの解析
+- **HSMSocketManager**: ソケット通信の管理
+- **HexUtil**: 16進数文字列の操作
+
+### 拡張方法
+
+#### MS処理の実装
+
+1. `GenerateSwipeData.php`の`mainMS()`関数を実装
+2. `profile.php`の`ms`セクションに必要な設定を追加
+3. IC処理と同様のステップ構成で実装
+
+#### 新しい暗号化方式の追加
+
+1. `HSMClient.php`に新しいメソッドを追加
+2. `HSMCommandGenerator.php`に対応するコマンド生成メソッドを追加
+3. `HSMResponseParser.php`に対応するレスポンス解析メソッドを追加
