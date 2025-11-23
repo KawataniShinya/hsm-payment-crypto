@@ -287,4 +287,23 @@ class HSMClient
             return $ipek;
         });
     }
+
+    /**
+     * IPEKをTR-34形式でエクスポート
+     *
+     * @param string $ipek IPEK（形式未定、DeriveIPEK.phpで生成されたIPEK）
+     * @param string $publicKey 公開鍵（バイナリデータ）
+     * @return array{ipekTr34: string, kcv: string, signature: string} IPEK(TR-34形式、HEX文字列)、KCV(HEX文字列)、Signature(HEX文字列)
+     * @throws Exception
+     */
+    public function exportIPEKformattedTR34(string $ipek, string $publicKey): array
+    {
+        return $this->executeWithConnection(function ($connection) use ($ipek, $publicKey) {
+            $message = $this->commandGenerator->generateCommandExportIPEKformattedTR34($ipek, $publicKey);
+            $this->sendMessage($message, $connection);
+            $responseData = $this->getResponseMessageWithCheckError($connection, 'E100009');
+            $ipekTr34 = $this->responseParser->parseResponseExportIPEKformattedTR34($responseData);
+            return $ipekTr34;
+        });
+    }
 }

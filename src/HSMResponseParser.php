@@ -237,4 +237,138 @@ class HSMResponseParser
             'kcv' => strtoupper($kcv)
         ];
     }
+
+    /**
+     * Export IPEK formatted TR-34 応答からIPEK(TR-34形式)、KCV、Signatureを抽出
+     *
+     * @param string $responseData レスポンスデータ
+     * @return array{ipekTr34: string, kcv: string, signature: string} IPEK(TR-34形式、HEX文字列)、KCV(HEX文字列)、Signature(HEX文字列)
+     */
+    public function parseResponseExportIPEKformattedTR34(string $responseData): array
+    {
+        $pos = self::RESPONSE_CODE_START_INDEX + self::RESPONSE_CODE_LENGTH + self::ERROR_CODE_LENGTH; // ヘッダー + Response Code + Error Code の後 (12バイト目)
+
+        $binPayload = substr($responseData, $pos);
+        echo 'hexPayload:' . bin2hex($binPayload);
+
+        // 2Byte目: 1Byte目(タグ)はスキップし、lengthに関するデータを解析。
+        $lengthPos = 1;
+        $binPayloadLen = strlen($binPayload);
+        $lengthInfo = $this->parseBerLengthFromPayload($binPayload, $lengthPos, $binPayloadLen);
+        $dataLength = $lengthInfo['dataLength'];
+        $lengthBytes = $lengthInfo['lengthBytes'];
+
+        // Authenticated Attributesの終端位置を算出
+        // タグ(1バイト) + lengthフィールド($lengthBytesバイト) + データ($dataLengthバイト)
+        $authenticatedAttributesEndPos = 1 + $lengthBytes + $dataLength;
+
+        // Authenticated Attributes以降のバイナリデータ（KCV、Enveloped Data、Signature Length、Signatureを含む）
+        $binAfterAuthenticatedAttributes = substr($binPayload, $authenticatedAttributesEndPos);
+
+        // KCVを取得（固定長3バイト）
+        $kcv = bin2hex(substr($binAfterAuthenticatedAttributes, 0, 3));
+
+        // Enveloped Data以降のバイナリデータを取得
+        $binAfterKCV = substr($binAfterAuthenticatedAttributes, 3);
+
+        // 2Byte目: lengthに関するデータを解析
+        $envelopedDataLengthPos = 1;
+        $binAfterKCVLen = strlen($binAfterKCV);
+        $envelopedDataLengthInfo = $this->parseBerLengthFromPayload($binAfterKCV, $envelopedDataLengthPos, $binAfterKCVLen);
+        $envelopedDataLength = $envelopedDataLengthInfo['dataLength'];
+        $envelopedDataLengthBytes = $envelopedDataLengthInfo['lengthBytes'];
+
+        // IPEK(TR-34)を抽出
+        // タグとlengthフィールドの後、$envelopedDataLengthバイト分がIPEK(TR-34)
+        $ipekTr34StartPos = 1 + $envelopedDataLengthBytes;
+        $ipekTr34 = substr($binAfterKCV, $ipekTr34StartPos, $envelopedDataLength);
+        $ipekTr34Hex = bin2hex($ipekTr34);
+
+        // Enveloped Dataの終端位置を算出
+        // タグ(1バイト) + lengthフィールド($envelopedDataLengthBytesバイト) + データ($envelopedDataLengthバイト)
+        $envelopedDataEndPos = 1 + $envelopedDataLengthBytes + $envelopedDataLength;
+
+        // それ以降のバイナリ（Signature Length、Signature）を取得
+        $binAfterEnvelopedData = substr($binAfterKCV, $envelopedDataEndPos);
+
+        // Signature Lengthを取得（最初の4バイト）
+        $signatureLengthBytes = substr($binAfterEnvelopedData, 0, 4);
+        $signatureLengthHex = bin2hex($signatureLengthBytes);
+
+        // HEX文字列をASCII文字列として解釈（例：30323536 → "0256"）
+        $signatureLengthStr = '';
+        for ($i = 0; $i < strlen($signatureLengthHex); $i += 2) {
+            $hexByte = substr($signatureLengthHex, $i, 2);
+            $signatureLengthStr .= chr(hexdec($hexByte));
+        }
+
+        // ASCII文字列を整数として解釈（例："0256" → 256）
+        $signatureLength = (int)$signatureLengthStr;
+
+        // Signature Lengthの後、$signatureLengthバイト分がSignature
+        $binAfterEnvelopedDataLen = strlen($binAfterEnvelopedData);
+        if (4 + $signatureLength > $binAfterEnvelopedDataLen) {
+            throw new Exception("binAfterEnvelopedData too short for Signature. required=" . (4 + $signatureLength) . ", actual=$binAfterEnvelopedDataLen");
+        }
+
+        // Signatureを抽出
+        $signature = substr($binAfterEnvelopedData, 4, $signatureLength);
+        $signatureHex = bin2hex($signature);
+
+        return [
+            'ipekTr34' => strtoupper($ipekTr34Hex),
+            'kcv' => strtoupper($kcv),
+            'signature' => strtoupper($signatureHex)
+        ];
+    }
+
+    /**
+     * BERエンコードされた長さフィールドを解析（hexPayload用）
+     *
+     * @param string $hexPayload バイナリデータ
+     * @param int $pos lengthフィールドの開始位置
+     * @param int $hexPayloadLen hexPayloadの長さ
+     * @return array{dataLength: int, lengthBytes: int} データ長とlengthフィールド自体のバイト数
+     */
+    private function parseBerLengthFromPayload(string $hexPayload, int $pos, int $hexPayloadLen): array
+    {
+        if ($pos >= $hexPayloadLen) {
+            throw new Exception("hexPayload too short for length field. pos=$pos, hexPayloadLen=$hexPayloadLen");
+        }
+
+        // lengthに関するデータ
+        $lengthByte = ord($hexPayload[$pos]);
+        $pos++;
+
+        // 先頭ビットをチェック
+        if (($lengthByte & 0x80) === 0) {
+            // 短形式: 下7ビットがそのまま長さ値
+            $dataLength = $lengthByte & 0x7F;
+            $lengthBytes = 1; // lengthフィールド自体のバイト数
+        } else {
+            // 長形式: 下7ビットが後続の長さバイト数
+            $lengthBytesCount = $lengthByte & 0x7F;
+
+            if ($lengthBytesCount === 0 || $lengthBytesCount > 4) {
+                throw new Exception("Invalid BER length format. lengthBytesCount=$lengthBytesCount");
+            }
+
+            if ($pos + $lengthBytesCount > $hexPayloadLen) {
+                throw new Exception("hexPayload too short for long form length. pos=$pos, lengthBytesCount=$lengthBytesCount, hexPayloadLen=$hexPayloadLen");
+            }
+
+            // 後続Byteで長さが定義される
+            $dataLength = 0;
+            for ($i = 0; $i < $lengthBytesCount; $i++) {
+                $dataLength = ($dataLength << 8) | ord($hexPayload[$pos + $i]);
+            }
+
+            $lengthBytes = 1 + $lengthBytesCount; // lengthフィールド自体のバイト数（1バイト目 + 後続バイト）
+        }
+
+        return [
+            'dataLength' => $dataLength,
+            'lengthBytes' => $lengthBytes
+        ];
+    }
 }

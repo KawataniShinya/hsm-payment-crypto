@@ -452,4 +452,74 @@ class HSMCommandGenerator
 
         return $message;
     }
+
+    /**
+     * Export IPEK formatted TR-34 コマンドの生成
+     * IPEKをTR-34形式でエクスポートするためのコマンド
+     *
+     * @param string $ipek IPEK（形式未定、DeriveIPEK.phpで生成されたIPEK）
+     * @param string $publicKey 公開鍵（バイナリデータ）
+     * @return string
+     */
+    public function generateCommandExportIPEKformattedTR34(string $ipek, string $publicKey): string
+    {
+        $header = '00001'; // カウンター(固定)
+        $headerBodySeparator = '-';
+        $command = 'B8'; // TR-34 Key Export
+        $schema = '0'; // X9 TR-34:2019 (Enveloped Data hash excludes sequence tag & length fields)
+        $keyType = 'FFF';
+        $key = strtoupper($ipek);
+        $kdhCredential = pack('H*', '3045302d3110300e06035504030c075445535420434131193017060355040a0c10546865204f7267616e697a6174696f6e0214394e761ce65d48daf6dca240fd4f6a3fd35da110'); // KDHを一意に識別するために使用されるBERエンコードされた識別名とシリアル。
+        $keyBlockEncryptionAlgorithm = '00'; // 192-bit TDES key – CBC
+        $ephemeralKeyEncryptionAlgorithm = '00'; // RSA OAEP
+        $numberOfKrdRecipients = '01';
+        $krdCredential = pack('H*', '30818d3079310b3009060355040613024a5031153013060355040a0c0c4578616d706c6520436f727031193017060355040b0c105061796d656e74205365637572697479310e300c06035504080c05546f6b796f3110300e06035504070c07436869796f64613116301406035504030c0d4b44482049737375657220303102103a9fb24c11de77889900aa5566778890');
+        $krdPublicKey = $publicKey;
+        $oaepEncodingParametersLength = '00';
+        $privateKeyFlag = '99'; // use private key provided with command.
+        $kdhPrivateKeyLength = 'FFFF';
+        $kdhPrivateKey = pack('H*', '5331303730343033525330304e303030307dbad43f8c8b4697452603068a204e8f8c2eafcfaa760e27948d1e5a92756d8c23a8437d4eb44238343b847d2588fdcaaa3d4b5c60d173410bb76aed3c40a1f102e9fdde153810616ae85fb6e9babaf84b071ea217cbab4865f84e70287eca4b4784e25a440de04cae2c226fa5ac1d7c20c8cd56b340af2bbc6061e350ee99a41429d57f9c31be9a174144d6f6f36387ea30e54ca2f6e407f2135828edc5a4d710c1589976e69594765e055243a1639c71ee0f8511d8650bb7d6f482a7133a8599326d72893d7023f3f3e5de9e92ffeadb3ca062b64027582ceb64c79958e89699f4f29ce0245df720018070dbc4cc94d96fe3ebffb67475624927f0839a1fbd50668075a9c40bfa3eca3999954b5cb4f4f0b944760c75f21c9d0485f2962c4ef09a298b4a41d3bda4d64833d66ba407f59d0b840cdcb0a4b52a8d2127e6e2472059235ac914259852469630b702957a1515673bd8fa0a7eb93252f08f5389a84e930aa101178b42ea95a74ee47e50ac4489d7e5c0ee41646888aaaf06ff7fad7e8e8729df9053c24059272c2ed0db8475ce47b373d343d819d81c5d678788b0932929dfd6fd722dc87ea3d23aeab82a42f4b1ef447716e945c562c42c2057b75d42d8934f27a686abb421d0f0eb17b947dcde54184f11372b3ce8bca1e8d6867a75d23e409c5345dcf81d27314b90d95e4cdc4935c229f1f701c1f546158b7485d740f7178c7cc946792b8bdb7823943ccd1b94c19aecfac737b8105b0b05c4643b9d5f6b392f8747880f8abe137cdb36fc505f8dea9c1200a16f3aa10e2cab4c0c4060377b1f5c97cd88328ca0f8bc814bcf3f3c511da2008a454dd70a08ad5be61c9d99f0ddb2b59f37c2c77bd59dc9c4c1ceb39dca2969e30ba9b80fcfea31a4af2a3c7d4bd5546b90e9d426fa9c20fddec74b06276412d213803af424ef32384530333438453446314137433745');
+        $signedDataPadMode = '01'; // PKCS#1 V1.5
+        $signedDataDigestAlgorithm = '0'; // SHA 256
+        $randomNonceLength = '08';
+        $randomNonce = pack('H*', 'ABCDABCDABCDABCD');
+        $delimiter1Tr31 = '&';
+        $modifiedExportValue = 'N';
+        $delimiter2Tr31 = '!';
+        $keyBlockVersionIDTr31 = 'B';
+
+        // ペイロード作成
+        $telegram =
+            $header .
+            $headerBodySeparator .
+            $command .
+            $schema .
+            $keyType .
+            $key .
+            $kdhCredential .
+            $keyBlockEncryptionAlgorithm .
+            $ephemeralKeyEncryptionAlgorithm .
+            $numberOfKrdRecipients .
+            $krdCredential .
+            $krdPublicKey .
+            $oaepEncodingParametersLength .
+            $privateKeyFlag .
+            $kdhPrivateKeyLength .
+            $kdhPrivateKey .
+            $signedDataPadMode .
+            $signedDataDigestAlgorithm .
+            $randomNonceLength .
+            $randomNonce .
+            $delimiter1Tr31 .
+            $modifiedExportValue .
+            $delimiter2Tr31 .
+            $keyBlockVersionIDTr31 .
+            ''
+        ;
+
+        // メッセージ生成（長さ + ペイロード）
+        $message = pack('H*', sprintf('%04X', strlen($telegram))) . $telegram;
+
+        return $message;
+    }
 }
