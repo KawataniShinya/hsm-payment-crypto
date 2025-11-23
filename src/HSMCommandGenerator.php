@@ -396,4 +396,60 @@ class HSMCommandGenerator
 
         return $message;
     }
+
+    /**
+     * Derive IPEK コマンドの生成
+     * IPEKを生成するためのコマンド（Key Block LMKで暗号化されたIPEKを導出）
+     *
+     * @param string $iksn IKSN
+     * @return string
+     */
+    public function generateCommandDeriveIPEK(string $iksn): string
+    {
+        // パラメータ設定（整形済み）
+        $header = '00001'; // カウンター(固定)
+        $headerBodySeparator = '-';
+        $command = 'A0'; // Generate a Key
+        $mode = 'A'; // Derive key
+        $keyType = 'FFF'; // ignored
+        $keySchemeLMK = 'S'; // not included in the authenticated data
+        $deriveKeyMode = '0'; // DUKPT - Derive IKEY from DUKPT Master Key
+        $dukptMasterKeyType = '1'; // BDK-1
+        $dukptMasterKey = $this->hsmBdkBlock;
+        $ksn = $iksn;
+        $delimiter = '#';
+        $keyUsage = 'B1'; // DUKPT Initial Key, IKEY
+        $algorithm = 'T2'; // double length DES key
+        $modeOfUse = 'N'; // No special restrictions apply.
+        $keyVersionNumber = '00';
+        $exportability = 'S'; // Sensitive
+        $numberOfOptionalBlocks = '00';
+
+        // ペイロード作成
+        $telegram =
+            $header .
+            $headerBodySeparator .
+            $command .
+            $mode .
+            $keyType .
+            $keySchemeLMK .
+            $deriveKeyMode .
+            $dukptMasterKeyType .
+            $dukptMasterKey .
+            $ksn .
+            $delimiter .
+            $keyUsage .
+            $algorithm .
+            $modeOfUse .
+            $keyVersionNumber .
+            $exportability .
+            $numberOfOptionalBlocks .
+            ''
+        ;
+
+        // メッセージ生成（長さ + ペイロード）
+        $message = pack('H*', sprintf('%04X', strlen($telegram))) . $telegram;
+
+        return $message;
+    }
 }

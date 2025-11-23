@@ -12,6 +12,7 @@ payShield10K HSMの各種コマンドを実行できます。主に以下の機�
 - **公開鍵インポート**: X.509形式のBase64エンコードされた公開鍵をHSMにインポート
 - **公開鍵暗号化TMKエクスポート**: インポートされた公開鍵のMAC値を使用してTMKを公開鍵で暗号化してエクスポート
 - **IPEK生成（TR-31形式）**: BDKとTMKを使用してIPEKを生成し、TR-31形式で出力
+- **IPEK生成（形式未定）**: BDKとTMKを使用してIPEKを生成（後続処理でTR-34形式で出力する想定）
 
 ## ファイル構成
 
@@ -23,6 +24,7 @@ HSMPaymentCrypto/
 ├── ImportPublicKey.php       # 公開鍵インポートツール
 ├── ExportTMKEncryptedByImportedPublicKey.php # 公開鍵暗号化TMKエクスポートツール
 ├── GenerateIPEKformattedTR31.php # IPEK生成ツール（TR-31形式）
+├── DeriveIPEK.php            # IPEK生成ツール（形式未定）
 ├── profile.php               # ユーザー設定ファイル
 ├── README.md                 # このファイル
 └── src/                      # プログラムクラス群
@@ -534,11 +536,11 @@ IKSN: 504730313000002
 
 Connected to HSM: tcp://192.168.8.202:1500
 Send: 00001-A0BFFFS01S10096B0TN00S0000FD2196304A9F78B4844B0719E4DFBACD97ABA9E94A05EFB3BFD3F754CC626643675DE7D3A50FBE45504730313000002S1009651TB00S000037B591D7EE516769C656FBF603B9EF7A4121DB4BC3524E267F1C4C7F31DF0B44FF17EABD9EE2D68FR#B1T2N00S00&N!B
-Receive: 00001-A100S10096B1TN00S0000...RB0080B1TN00N0000...C49891
+Receive: 00001-A100S10096B1TN00S0000D4F66BEE64672EC4390604494FA164E521E11A27F2141D2593BAA960E14580ACF4473DCDCD4BC13BRB0080B1TN00N00003FD3AE994EB3971D9C6A091A846F09A171359CA6E985DA6F415564A61D2ECF87C49891
 Disconnected from HSM
 === RESULT ===
-ipekTr31: RB0080B1TN00N000051EBB6E31C1D6BAEFBEF2775F195B471B1F0BE0CCB0CB1A893D31050
-kcv: 3443A1
+ipekTr31: RB0080B1TN00N00003FD3AE994EB3971D9C6A091A846F09A171359CA6E985DA6F415564A61D2ECF87
+kcv: C49891
 ```
 
 > **注意**: 生成されるIPEKとKCVは毎回異なります。上記は実行例であり、実際の出力は実行のたびに変わります。IPEKはTR-31形式（`RB0080B1TN00N0000...`で始まる）で出力され、KCVは6文字の16進数で出力されます。
@@ -552,3 +554,54 @@ kcv: 3443A1
 - **キー管理**: `src/property.php`のBDKとTMKを使用
 
 > **注意**: BDKは`src/property.php`の`bdk_block_3des`、TMKは`src/property.php`の`tmk_block`から取得されます。本ツールはTR-31形式のIPEKを生成します。TR-34形式のIPEKが必要な場合は別途対応ツールを使用してください。
+
+#### DeriveIPEK.php (A0)(mode:B)
+
+IPEK（Initial PIN Encryption Key）を生成するツールです。BDKとTMKを使用してIPEKを生成します。生成されたIPEKの形式は定まっておらず、後続処理でTR-34形式で出力する想定です。
+
+##### 使用コマンド
+
+[A0] Derive & Export a Key (mode:B)
+
+##### 使用方法
+
+```bash
+php DeriveIPEK.php <IKSN>
+```
+
+##### パラメータ
+
+- `IKSN`: Initial Key Serial Number（15文字の16進数）
+
+##### 実行例
+
+```bash
+php DeriveIPEK.php 504730313000002
+```
+
+##### 期待値
+
+```
+=== IPEK Derivation Tool ===
+IKSN: 504730313000002
+
+Connected to HSM: tcp://192.168.8.202:1500
+Send: 00001-A0BFFFS01S10096B0TN00S0000FD2196304A9F78B4844B0719E4DFBACD97ABA9E94A05EFB3BFD3F754CC626643675DE7D3A50FBE45504730313000002S1009651TB00S000037B591D7EE516769C656FBF603B9EF7A4121DB4BC3524E267F1C4C7F31DF0B44FF17EABD9EE2D68F%00
+Receive: 00001-A100S10096B1TN00S0000...C49891
+Disconnected from HSM
+=== RESULT ===
+ipek: S10096B1TN00S0000D4F66BEE64672EC4390604494FA164E5F119D855A47DCC06AFC621B11BE01FAD8B7921A6598D8C44
+kcv: C49891
+```
+
+> **注意**: 生成されるIPEKとKCVは毎回異なります。上記は実行例であり、実際の出力は実行のたびに変わります。IPEKの形式は未定で、後続処理でTR-34形式で出力する想定です。KCVは6文字の16進数で出力されます。
+
+##### 機能説明
+
+- **IPEK生成**: BDKとTMKを使用してIPEK（Initial PIN Encryption Key）を生成
+- **DUKPT対応**: IKSNを使用したDUKPTキー派生に対応
+- **形式未定**: 生成されたIPEKの形式は定まっておらず、後続処理でTR-34形式で出力する想定
+- **KCV生成**: キーの整合性検証用のKCV（Key Check Value）を生成
+- **キー管理**: `src/property.php`のBDKとTMKを使用
+
+> **注意**: BDKは`src/property.php`の`bdk_block_3des`、TMKは`src/property.php`の`tmk_block`から取得されます。生成されたIPEKの形式は未定で、後続処理でTR-34形式で出力する想定です。

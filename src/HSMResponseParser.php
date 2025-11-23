@@ -213,4 +213,28 @@ class HSMResponseParser
         // 実際の鍵ブロック全文の長さ = キー・スキーム識別子(1文字) + キーブロック長
         return 1 + $keyBlockLength;
     }
+
+    /**
+     * Derive IPEK 応答からIPEKを抽出
+     * IPEKの形式は未定、後続処理でTR-34形式で出力する想定
+     *
+     * @param string $responseData レスポンスデータ
+     * @return array{ipek: string, kcv: string} IPEKとKCV
+     */
+    public function parseResponseDeriveIPEK(string $responseData): array
+    {
+        // LMK鍵ブロックの長さを算出
+        $lmkKeyBlockStart = self::IPEK_POS_KEY_LMK;
+        $lmkKeyBlockLength = $this->calculateLmkKeyBlockLength($responseData, $lmkKeyBlockStart);
+
+        // KCVの開始位置を算出
+        $kcvStart = $lmkKeyBlockStart + $lmkKeyBlockLength;
+
+        $ipek = substr($responseData, $lmkKeyBlockStart, $lmkKeyBlockLength);
+        $kcv = substr($responseData, $kcvStart, self::KCV_LEN);
+        return [
+            'ipek' => $ipek,
+            'kcv' => strtoupper($kcv)
+        ];
+    }
 }

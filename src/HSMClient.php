@@ -269,4 +269,22 @@ class HSMClient
             return $ipekWithKcv;
         });
     }
+
+    /**
+     * IPEKを生成する
+     *
+     * @param string $iksn IKSN（Initial Key Serial Number）
+     * @return array{ipek: string, kcv: string} IPEKとKCV
+     * @throws Exception
+     */
+    public function deriveIPEK(string $iksn): array
+    {
+        return $this->executeWithConnection(function ($connection) use ($iksn) {
+            $message = $this->commandGenerator->generateCommandDeriveIPEK($iksn);
+            $this->sendMessage($message, $connection);
+            $responseData = $this->getResponseMessageWithCheckError($connection, 'E100009');
+            $ipek = $this->responseParser->parseResponseDeriveIPEK($responseData);
+            return $ipek;
+        });
+    }
 }
