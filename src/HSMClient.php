@@ -222,4 +222,33 @@ class HSMClient
             return $pubKeyMac;
         });
     }
+
+    /**
+     * 公開鍵で暗号化されたTMKをエクスポート
+     *
+     * @param string $pubKeyMac 公開鍵MAC（バイナリデータ）
+     * @return string 暗号化TMK（Base64エンコード）
+     * @throws Exception
+     */
+    public function exportTMKEncryptedByPublicKey(string $pubKeyMac): string
+    {
+        return $this->executeWithConnection(function ($connection) use ($pubKeyMac) {
+            $message = $this->commandGenerator->generateCommandExportKeyUnderPublicKey($pubKeyMac);
+            $this->sendMessage($message, $connection);
+
+            // 応答受信
+            $responseData = $this->getResponseMessage($connection);
+            $errorCode = $this->responseParser->getErrorCode($responseData);
+
+            // エラーチェック
+            if ($errorCode !== HSMResponseParser::ERROR_CODE_NO_ERROR) {
+                $responseCode = $this->responseParser->getResponseCode($responseData);
+                echo "HSM Error: ResponseCode=$responseCode, ErrorCode=$errorCode\n";
+                throw new Exception("HSM Error: Failed to export TMK encrypted by public key (ErrorCode=$errorCode)");
+            }
+
+            $encryptedTmkBase64Encoded = $this->responseParser->parseResponseExportKeyUnderPublicKey($responseData);
+            return $encryptedTmkBase64Encoded;
+        });
+    }
 }

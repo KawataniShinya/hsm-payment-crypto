@@ -10,6 +10,7 @@ payShield10K HSMの各種コマンドを実行できます。主に以下の機�
 - **スワイプデータパース**: 生成されたスワイプデータをパース
 - **データ暗号化**: 任意のデータの暗号化
 - **公開鍵インポート**: X.509形式のBase64エンコードされた公開鍵をHSMにインポート
+- **公開鍵暗号化TMKエクスポート**: インポートされた公開鍵のMAC値を使用してTMKを公開鍵で暗号化してエクスポート
 
 ## ファイル構成
 
@@ -19,6 +20,7 @@ HSMPaymentCryptoGit/
 ├── ParseSwipeData.php        # スワイプデータパーサー
 ├── Encrypt.php               # データ暗号化ツール
 ├── ImportPublicKey.php       # 公開鍵インポートツール
+├── ExportTMKEncryptedByImportedPublicKey.php # 公開鍵暗号化TMKエクスポートツール
 ├── profile.php               # ユーザー設定ファイル
 ├── README.md                 # このファイル
 └── src/                      # プログラムクラス群
@@ -402,3 +404,43 @@ Public Key MAC (HEX): 5331303330343032524E303053303030303082010A0282010100C75CAE
 - **DER形式対応**: DER形式の公開鍵データを抽出
 
 > **注意**: 公開鍵MAC値は後続の処理（`ExportTMKEncryptedByImportedPublicKey.php`）で使用されます。
+
+#### ExportTMKEncryptedByImportedPublicKey.php (GK/GL)
+
+インポートされた公開鍵のMAC値を使用して、TMKを公開鍵で暗号化してエクスポートするツールです。
+
+##### 使用コマンド
+
+[GK/GL] Export Key under an RSA Public Key
+
+##### 使用方法
+
+```bash
+php ExportTMKEncryptedByImportedPublicKey.php <PublicKeyMAC>
+```
+
+##### パラメータ
+
+- `PublicKeyMAC`: 公開鍵MAC値（16進数文字列）
+
+##### 実行例
+
+```bash
+php ExportTMKEncryptedByImportedPublicKey.php 5331303330343032524E303053303030303082010A0282010100C75CAE2DF14B56178511B58B21333286706996919BDE736A5CB7E8BACFBAFD951CE59D7DCF031066A45A394F03E0C7F0A41A168C5F231D5A2DDCF73EADE16B9CCC82F6D7370C5415C19A1ECC99939418406F75834A531F6AA7FA4F13BB60BB50E5C6D6A8880727858F1DFB28F29D4AB3B4FBAEDCEF4BF2610E17B89673A11FFE8CD3122B869F1FCABE447891F19C893A26A6B97FDD5437775819C622F88EF4A519BAB8CB62E9B8126A2B4BAB3209CE32B9E73ABFE0F68C2E58CD238FF99E66BBECD5E997A1310B93C4F7FDFF7F5DB6B0438C3EC16E947D4B90AB4A9C8D3C6F886E94BEE8E647535B19D9F30596FF41C8FDB840298DC040EE13FF472B1878DDD10203010001DDA432373242433535443044373142423344
+```
+
+##### 期待値
+
+```
+=== Export TMK Encrypted by Public Key Tool ===
+Public Key MAC (HEX): 5331303330343032524E303053303030303082010A02820101...
+
+Connected to HSM: tcp://192.168.8.202:1500
+Send: 00001-GK0102010100;FFFFFS1009651TB00S000037B591D7EE516769C656FBF603B9EF7A4121DB4BC3524E267F1C4C7F31DF0B44FF17EABD9EE2D68F2020A20000000000S1030402RN00S00000...
+Receive: 00001-GL000256...
+Disconnected from HSM
+=== RESULT ===
+暗号化TMK: o1qHg85prHDMVy5fTvw8ww/8ROVmRphwc0Wk15KazlZMIgaoBsrXqjgZqRMDxr2nhGgGineGYugt0PzRm4YpST2K6/fS8qp8o1rqPEzjtFBi5wZlUFhb6DaXfNc5AVL3elPpBitirjD7XDcS5+Ujnhd5gKsxnpSSbG4UFJx9SFvrDZp5Xanz3mXx4nfU9rP4+K9R6QzawK8kXDfmmhtpetlARTV/3XUIXiUQlTI7dI62iG+VaDMkeOpPd0JehMcqiFpR3JITuhn7EsFhiDB/HR3wzEGPm9duSgoERHQyksnKywH0U0SBV09ZLfjNyOxQPG4zMGonKDpby/lVZ08GBQ==
+```
+
+> **注意**: 生成される暗号化TMKは毎回異なります。上記は実行例であり、実際の出力は実行のたびに変わります。出力はBase64エンコードされた暗号化TMKです。

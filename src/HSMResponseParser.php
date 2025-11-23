@@ -120,4 +120,17 @@ class HSMResponseParser
     {
         return substr($responseData, self::OFFSET_PUBLIC_KEY_MAC);
     }
+
+    /**
+     * Export Key under an RSA Public Key 応答(GL)から結果を抽出
+     *
+     * @param string $responseData レスポンスデータ
+     * @return string 暗号化TMK（Base64エンコード）
+     */
+    public function parseResponseExportKeyUnderPublicKey(string $responseData): string
+    {
+        $encryptedTmk = substr($responseData, 16);
+        $encryptedTmkBase64Encoded = base64_encode($encryptedTmk);
+        return $encryptedTmkBase64Encoded;
+    }
 }

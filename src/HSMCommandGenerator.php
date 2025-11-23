@@ -269,4 +269,64 @@ class HSMCommandGenerator
 
         return $message;
     }
+
+    /**
+     * Export Key under an RSA Public Key コマンド(GK)の生成
+     *
+     * @param string $pubKeyMac 公開鍵MAC（バイナリデータ）
+     * @return string
+     */
+    public function generateCommandExportKeyUnderPublicKey(string $pubKeyMac): string
+    {
+        // パラメータ設定（整形済み）
+        $header = '00001'; // カウンター(固定)
+        $headerBodySeparator = '-';
+        $command = 'GK'; // Export Key under an RSA Public Key
+        $encryptionIdentifier = '01'; // RSA
+        $padModeIdentifier = '02'; // PKCS#1 v2.2 OAEP method (EME-OAEP-ENCODE)
+        $maskGenerationFunction = '01'; // MGF1 as defined in PKCS#1 v2.2.
+        $mgfHashFunction = '01'; // SHA-1
+        $oaepEncodingParametersLength = '00'; // no Encoding Parameters
+        $oaepEncodingParametersDelimiter = ';'; // OAEP Encoding Parameters Delimiter
+        $keyType = 'FFFF'; // ignored
+        $desKeyFlag = 'F'; // ignored
+        $keyUnderLmkWithCheckValue = $this->hsmTmkBlock . $this->hsmTmkMac;
+        $delimiter1 = ';';
+        $keyBlockType = '02'; // Key Data Block Template
+        $keyBlockTemplateLength = '0020'; // Length of Key Data Block data
+        $keyBlockTemplate = '0000800000000000000000000000000000000000';
+        $delimiter2 = ';';
+        $keyOffset = '0004';
+        $checkValueLength = '00';
+        $checkValueOffset = '0000';
+
+        // ペイロード作成
+        $telegram =
+            $header .
+            $headerBodySeparator .
+            $command .
+            $encryptionIdentifier .
+            $padModeIdentifier .
+            $maskGenerationFunction .
+            $mgfHashFunction .
+            $oaepEncodingParametersLength .
+            $oaepEncodingParametersDelimiter .
+            $keyType .
+            $desKeyFlag .
+            $keyUnderLmkWithCheckValue .
+            $pubKeyMac .
+            $delimiter1 .
+            $keyBlockType .
+            $keyBlockTemplateLength .
+            $keyBlockTemplate .
+            $delimiter2 .
+            $keyOffset .
+            $checkValueLength .
+            $checkValueOffset;
+
+        // メッセージ生成（長さ + ペイロード）
+        $message = pack('H*', sprintf('%04X', strlen($telegram))) . $telegram;
+
+        return $message;
+    }
 }
